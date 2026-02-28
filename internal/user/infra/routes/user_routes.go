@@ -28,7 +28,6 @@ func SetupUserRoutes(
 		protected.Use(middleware.AuthMiddleware(jwtSecret))
 		{
 			protected.GET("/profile", getProfileCtrl.Handle)
-			protected.GET("/search", searchUsersCtrl.Handle)
 			protected.PATCH("/profile", updateProfileCtrl.Handle)
 
 			// Restringidas

@@ -9,6 +9,7 @@ import (
 
 	"github.com/JosephAntonyDev/Notaria178_API/internal/core"
 	userInfra "github.com/JosephAntonyDev/Notaria178_API/internal/user/infra"
+	attendanceInfra "github.com/JosephAntonyDev/Notaria178_API/internal/attendance/infra"
 )
 
 func main() {
@@ -32,7 +33,7 @@ func main() {
 	r.Use(core.SetupCORS())
 
 	userInfra.SetupDependencies(r, db, jwtSecret)
-
+	attendanceInfra.SetupDependencies(r, db, jwtSecret)
 	port := os.Getenv("PORT")
 	if port == "" {
 		port = "8080"

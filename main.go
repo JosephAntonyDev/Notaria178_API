@@ -7,9 +7,10 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
 
+	actInfra "github.com/JosephAntonyDev/Notaria178_API/internal/act/infra"
+	attendanceInfra "github.com/JosephAntonyDev/Notaria178_API/internal/attendance/infra"
 	"github.com/JosephAntonyDev/Notaria178_API/internal/core"
 	userInfra "github.com/JosephAntonyDev/Notaria178_API/internal/user/infra"
-	attendanceInfra "github.com/JosephAntonyDev/Notaria178_API/internal/attendance/infra"
 )
 
 func main() {
@@ -26,7 +27,7 @@ func main() {
 	if err != nil {
 		log.Fatalf("Error fatal al conectar con la base de datos: %v", err)
 	}
-	defer db.Close() 
+	defer db.Close()
 
 	r := gin.Default()
 
@@ -34,6 +35,7 @@ func main() {
 
 	userInfra.SetupDependencies(r, db, jwtSecret)
 	attendanceInfra.SetupDependencies(r, db, jwtSecret)
+	actInfra.SetupDependencies(r, db, jwtSecret)
 	port := os.Getenv("PORT")
 	if port == "" {
 		port = "8080"

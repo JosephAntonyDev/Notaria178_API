@@ -1,0 +1,58 @@
+# ==========================================
+# 1. BINARIOS Y COMPILADOS DE GO
+# ==========================================
+# Ignorar los ejecutables compilados de Go
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+# Carpeta común donde se manda el binario final
+/bin/
+# Carpeta temporal que usa Go para correr el servidor (ej. con librerías como Air)
+/tmp/
+
+# ==========================================
+# 2. TESTING Y DEBUGGING
+# ==========================================
+*.test
+*.out
+*.prof
+coverage.txt
+
+# ==========================================
+# 3. VARIABLES DE ENTORNO Y SECRETOS
+# ==========================================
+.env
+.env.*
+!.env.example # Permitir subir un archivo de ejemplo vacío para que sepas qué variables necesitas
+
+# ==========================================
+# 4. ARCHIVOS LOCALES DE LA NOTARÍA
+# ==========================================
+# Ignorar las carpetas físicas donde guardarás los PDFs, Word e imágenes
+/uploads/
+/storage/
+/media/
+
+# ==========================================
+# 5. BASE DE DATOS Y RESPALDOS LOCALES
+# ==========================================
+# El archivo schema.sql SÍ se subirá, pero ignoramos cualquier respaldo con datos reales
+*.dump
+*.bak
+*backup*.sql
+/db_data/ # Por si levantas PostgreSQL con Docker localmente y mapeas un volumen
+
+# ==========================================
+# 6. EDITORES Y SISTEMA OPERATIVO
+# ==========================================
+# Configuraciones locales del editor de código
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Archivos basura de Windows y Mac
+.DS_Store
+Thumbs.db

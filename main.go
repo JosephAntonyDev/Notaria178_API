@@ -12,7 +12,9 @@ import (
 	branchInfra "github.com/JosephAntonyDev/Notaria178_API/internal/branch/infra"
 	clientInfra "github.com/JosephAntonyDev/Notaria178_API/internal/client/infra"
 	"github.com/JosephAntonyDev/Notaria178_API/internal/core"
+	documentInfra "github.com/JosephAntonyDev/Notaria178_API/internal/document/infra"
 	userInfra "github.com/JosephAntonyDev/Notaria178_API/internal/user/infra"
+	workInfra "github.com/JosephAntonyDev/Notaria178_API/internal/work/infra"
 )
 
 func main() {
@@ -40,6 +42,8 @@ func main() {
 	actInfra.SetupDependencies(r, db, jwtSecret)
 	clientInfra.SetupDependencies(r, db, jwtSecret)
 	branchInfra.SetupDependencies(r, db, jwtSecret)
+	workInfra.SetupDependencies(r, db, jwtSecret)
+	documentInfra.SetupDependencies(r, db, jwtSecret)
 	port := os.Getenv("PORT")
 	if port == "" {
 		port = "8080"

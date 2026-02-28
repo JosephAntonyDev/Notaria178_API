@@ -11,7 +11,6 @@ import (
 	"github.com/JosephAntonyDev/Notaria178_API/internal/user/domain/entities"
 )
 
-// 1. AuthMiddleware: Valida que el token sea real y extrae los datos
 func AuthMiddleware(jwtSecret string) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		authHeader := c.GetHeader("Authorization")
@@ -57,8 +56,7 @@ func AuthMiddleware(jwtSecret string) gin.HandlerFunc {
 	}
 }
 
-// 2. RoleMiddleware: Un middleware dinámico que bloquea a los intrusos
-// Le pasas una lista de los roles permitidos para la ruta.
+
 func RequireRoles(allowedRoles ...entities.UserRole) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		// Obtenemos el rol que el AuthMiddleware guardó

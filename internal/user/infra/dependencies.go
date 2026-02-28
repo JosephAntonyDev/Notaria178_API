@@ -9,7 +9,7 @@ import (
 	"github.com/JosephAntonyDev/Notaria178_API/internal/user/infra/adapters"
 	"github.com/JosephAntonyDev/Notaria178_API/internal/user/infra/controllers"
 	"github.com/JosephAntonyDev/Notaria178_API/internal/user/infra/repository"
-	"github.com/JosephAntonyDev/Notaria178_API/internal/user/infra/routers"
+	"github.com/JosephAntonyDev/Notaria178_API/internal/user/infra/routes"
 )
 
 func SetupDependencies(r *gin.Engine, db *sql.DB, jwtSecret string) {
@@ -23,5 +23,5 @@ func SetupDependencies(r *gin.Engine, db *sql.DB, jwtSecret string) {
 	createUserCtrl := controllers.NewCreateUserController(createUserUseCase)
 	loginUserCtrl := controllers.NewLoginUserController(loginUserUseCase)
 
-	routers.SetupUserRoutes(r, createUserCtrl, loginUserCtrl)
+	routes.SetupUserRoutes(r, createUserCtrl, loginUserCtrl, jwtSecret)
 }

@@ -9,10 +9,12 @@ import (
 
 	actInfra "github.com/JosephAntonyDev/Notaria178_API/internal/act/infra"
 	attendanceInfra "github.com/JosephAntonyDev/Notaria178_API/internal/attendance/infra"
+	auditInfra "github.com/JosephAntonyDev/Notaria178_API/internal/audit/infra"
 	branchInfra "github.com/JosephAntonyDev/Notaria178_API/internal/branch/infra"
 	clientInfra "github.com/JosephAntonyDev/Notaria178_API/internal/client/infra"
 	"github.com/JosephAntonyDev/Notaria178_API/internal/core"
 	documentInfra "github.com/JosephAntonyDev/Notaria178_API/internal/document/infra"
+	notificationInfra "github.com/JosephAntonyDev/Notaria178_API/internal/notification/infra"
 	userInfra "github.com/JosephAntonyDev/Notaria178_API/internal/user/infra"
 	workInfra "github.com/JosephAntonyDev/Notaria178_API/internal/work/infra"
 )
@@ -44,6 +46,8 @@ func main() {
 	branchInfra.SetupDependencies(r, db, jwtSecret)
 	workInfra.SetupDependencies(r, db, jwtSecret)
 	documentInfra.SetupDependencies(r, db, jwtSecret)
+	notificationInfra.SetupDependencies(r, db, jwtSecret)
+	_ = auditInfra.SetupDependencies(r, db, jwtSecret) // Devuelve *LogActionUseCase para inyección futura
 	port := os.Getenv("PORT")
 	if port == "" {
 		port = "8080"

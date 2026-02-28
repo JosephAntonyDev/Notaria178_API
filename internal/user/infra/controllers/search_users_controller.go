@@ -4,47 +4,54 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
-	
 	"github.com/JosephAntonyDev/Notaria178_API/internal/core/dtos"
 	"github.com/JosephAntonyDev/Notaria178_API/internal/user/app"
+	"github.com/JosephAntonyDev/Notaria178_API/internal/user/domain/entities"
 )
+
+type SearchUsersQuery struct {
+	dtos.PaginationRequest
+	Search   *string `form:"search"`
+	Status   *string `form:"status"`
+	Role     *string `form:"role"`
+	BranchID *string `form:"branch_id"`
+}
 
 type SearchUsersController struct {
 	useCase *app.SearchUsersUseCase
 }
 
 func NewSearchUsersController(uc *app.SearchUsersUseCase) *SearchUsersController {
-	return &SearchUsersController{
-		useCase: uc,
-	}
+	return &SearchUsersController{useCase: uc}
 }
 
 func (ctrl *SearchUsersController) Handle(c *gin.Context) {
-	//Instanciamos el DTO Global
-	var req dtos.PaginationRequest
+	var query SearchUsersQuery
+	
+	query.Limit = 10
+	query.Offset = 0
 
-	// Valores por defecto seguros por si el frontend no los envía
-	req.Limit = 10
-	req.Offset = 0
-
-	if err := c.ShouldBindQuery(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Parámetros de paginación inválidos"})
+	if err := c.ShouldBindQuery(&query); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Parámetros inválidos"})
 		return
 	}
 
-	users, err := ctrl.useCase.Execute(c.Request.Context(), req.Limit, req.Offset)
+	var filters entities.UserFilters
+	filters.Limit = query.Limit
+	filters.Offset = query.Offset
+	filters.Search = query.Search
+	filters.Status = query.Status
+	filters.Role = query.Role
+	filters.BranchID = query.BranchID
+
+	users, err := ctrl.useCase.Execute(c.Request.Context(), filters)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error interno al buscar los usuarios"})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error interno al buscar usuarios"})
 		return
 	}
 
-	// Nota: Por ahora 'Total' es la longitud del arreglo actual. 
-	// Para un conteo real de todos los registros (ej. "página 1 de 50"), 
-	// en el futuro podemos agregar un método Count() al repositorio.
-	response := dtos.PaginatedResponse{
+	c.JSON(http.StatusOK, dtos.PaginatedResponse{
 		Total: len(users), 
 		Data:  users,
-	}
-
-	c.JSON(http.StatusOK, response)
+	})
 }

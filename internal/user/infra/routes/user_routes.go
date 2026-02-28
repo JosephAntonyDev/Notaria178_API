@@ -37,6 +37,7 @@ func SetupUserRoutes(
 			{
 				adminOnly.POST("/create", createUserCtrl.Handle)
 				adminOnly.PATCH("/update/:id", updateEmployeeCtrl.Handle)
+				protected.GET("/search", searchUsersCtrl.Handle)
 			}
 		}
 	}

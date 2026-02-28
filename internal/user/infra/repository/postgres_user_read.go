@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"errors"
 	"github.com/google/uuid"
+	"strconv"
 
 	"github.com/JosephAntonyDev/Notaria178_API/internal/user/domain/entities"
 )
@@ -74,16 +75,47 @@ func (repo *PostgresUserRepository) GetByID(ctx context.Context, id uuid.UUID) (
 	return &user, nil
 }
 
-func (repo *PostgresUserRepository) List(ctx context.Context, limit int, offset int) ([]*entities.User, error) {
-	query := `
+func (repo *PostgresUserRepository) List(ctx context.Context, filters entities.UserFilters) ([]*entities.User, error) {
+	
+	baseQuery := `
 		SELECT 
 			id, branch_id, full_name, email, password_hash, 
 			phone, role, status, hire_date, start_time, end_time, created_at, updated_at
 		FROM users 
-		ORDER BY created_at DESC
-		LIMIT $1 OFFSET $2
+		WHERE 1=1 
 	`
-	rows, err := repo.db.QueryContext(ctx, query, limit, offset)
+	
+	args := []interface{}{}
+	argId := 1
+
+	if filters.Search != nil && *filters.Search != "" {
+		baseQuery += ` AND (full_name ILIKE $` + strconv.Itoa(argId) + ` OR email ILIKE $` + strconv.Itoa(argId) + `)`
+		args = append(args, "%"+*filters.Search+"%")
+		argId++
+	}
+
+	if filters.Status != nil && *filters.Status != "" {
+		baseQuery += ` AND status = $` + strconv.Itoa(argId)
+		args = append(args, *filters.Status)
+		argId++
+	}
+
+	if filters.Role != nil && *filters.Role != "" {
+		baseQuery += ` AND role = $` + strconv.Itoa(argId)
+		args = append(args, *filters.Role)
+		argId++
+	}
+
+	if filters.BranchID != nil && *filters.BranchID != "" {
+		baseQuery += ` AND branch_id = $` + strconv.Itoa(argId)
+		args = append(args, *filters.BranchID)
+		argId++
+	}
+
+	baseQuery += ` ORDER BY created_at DESC LIMIT $` + strconv.Itoa(argId) + ` OFFSET $` + strconv.Itoa(argId+1)
+	args = append(args, filters.Limit, filters.Offset)
+
+	rows, err := repo.db.QueryContext(ctx, baseQuery, args...)
 	if err != nil {
 		return nil, err
 	}

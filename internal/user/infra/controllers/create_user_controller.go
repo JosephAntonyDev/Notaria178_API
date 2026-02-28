@@ -18,15 +18,25 @@ func NewCreateUserController(uc *app.CreateUserUseCase) *CreateUserController {
 }
 
 func (ctrl *CreateUserController) Handle(c *gin.Context) {
-	var req app.CreateUserRequest
+	requesterRoleVal, exists := c.Get("userRole")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "No se pudo identificar tu nivel de acceso"})
+		return
+	}
+	requesterRole := requesterRoleVal.(string)
 
+	var req app.CreateUserRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Datos inválidos: verifica los campos requeridos"})
 		return
 	}
 
-	user, err := ctrl.useCase.Execute(c.Request.Context(), req)
+	user, err := ctrl.useCase.Execute(c.Request.Context(), requesterRole, req)
 	if err != nil {
+		if err.Error()[:18] == "operación denegada" {
+			c.JSON(http.StatusForbidden, gin.H{"error": err.Error()})
+			return
+		}
 		if err.Error() == "el correo ya está registrado en el sistema" {
 			c.JSON(http.StatusConflict, gin.H{"error": err.Error()})
 			return

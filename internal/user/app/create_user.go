@@ -10,7 +10,6 @@ import (
 	"github.com/JosephAntonyDev/Notaria178_API/internal/user/domain/entities"
 	"github.com/JosephAntonyDev/Notaria178_API/internal/user/domain/ports"
 	"github.com/JosephAntonyDev/Notaria178_API/internal/user/domain/repository"
-
 )
 
 type CreateUserRequest struct {
@@ -34,7 +33,12 @@ func NewCreateUserUseCase(r repository.UserRepository, h ports.PasswordHasher) *
 	}
 }
 
-func (uc *CreateUserUseCase) Execute(ctx context.Context, req CreateUserRequest) (*entities.User, error) {
+func (uc *CreateUserUseCase) Execute(ctx context.Context, requesterRole string, req CreateUserRequest) (*entities.User, error) {
+	
+	if requesterRole == string(entities.RoleLocalAdmin) && req.Role == string(entities.RoleSuperAdmin) {
+		return nil, errors.New("operación denegada: un administrador no puede crear una cuenta de notario titular")
+	}
+
 	existingUser, _ := uc.repo.GetByEmail(ctx, req.Email)
 	if existingUser != nil {
 		return nil, errors.New("el correo ya está registrado en el sistema")
@@ -76,12 +80,8 @@ func (uc *CreateUserUseCase) Execute(ctx context.Context, req CreateUserRequest)
 	return newUser, nil
 }
 
-// sendWelcomeEmailAsync simula una tarea pesada (Ej. conectarse a AWS SES o SendGrid)
 func (uc *CreateUserUseCase) sendWelcomeEmailAsync(email string, name string) {
 	log.Printf("[Fondo] Iniciando envío de credenciales a: %s...", email)
-	
-	// Simulamos el tiempo que tarda un proveedor de correos (2 segundos)
 	time.Sleep(2 * time.Second) 
-	
 	log.Printf("[Fondo] Correo enviado exitosamente a: %s", name)
 }

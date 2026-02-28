@@ -13,7 +13,7 @@ func (repo *PostgresUserRepository) GetByEmail(ctx context.Context, email string
 	query := `
 		SELECT 
 			id, branch_id, full_name, email, password_hash, 
-			phone, role, status, hire_date, created_at, updated_at
+			phone, role, status, hire_date, start_time, end_time, created_at, updated_at
 		FROM users 
 		WHERE email = $1
 	`
@@ -32,6 +32,8 @@ func (repo *PostgresUserRepository) GetByEmail(ctx context.Context, email string
 		&user.Role,
 		&user.Status,
 		&user.HireDate,
+		&user.StartTime,
+		&user.EndTime,
 		&user.CreatedAt,
 		&user.UpdatedAt,
 	)
@@ -50,7 +52,7 @@ func (repo *PostgresUserRepository) GetByID(ctx context.Context, id uuid.UUID) (
 	query := `
 		SELECT 
 			id, branch_id, full_name, email, password_hash, 
-			phone, role, status, hire_date, created_at, updated_at
+			phone, role, status, hire_date, start_time, end_time, created_at, updated_at
 		FROM users 
 		WHERE id = $1
 	`
@@ -60,7 +62,7 @@ func (repo *PostgresUserRepository) GetByID(ctx context.Context, id uuid.UUID) (
 	err := row.Scan(
 		&user.ID, &user.BranchID, &user.FullName, &user.Email,
 		&user.PasswordHash, &user.Phone, &user.Role, &user.Status,
-		&user.HireDate, &user.CreatedAt, &user.UpdatedAt,
+		&user.HireDate, &user.StartTime, &user.EndTime, &user.CreatedAt, &user.UpdatedAt,
 	)
 
 	if err != nil {
@@ -76,7 +78,7 @@ func (repo *PostgresUserRepository) List(ctx context.Context, limit int, offset 
 	query := `
 		SELECT 
 			id, branch_id, full_name, email, password_hash, 
-			phone, role, status, hire_date, created_at, updated_at
+			phone, role, status, hire_date, start_time, end_time, created_at, updated_at
 		FROM users 
 		ORDER BY created_at DESC
 		LIMIT $1 OFFSET $2
@@ -93,7 +95,7 @@ func (repo *PostgresUserRepository) List(ctx context.Context, limit int, offset 
 		err := rows.Scan(
 			&user.ID, &user.BranchID, &user.FullName, &user.Email,
 			&user.PasswordHash, &user.Phone, &user.Role, &user.Status,
-			&user.HireDate, &user.CreatedAt, &user.UpdatedAt,
+			&user.HireDate, &user.StartTime, &user.EndTime, &user.CreatedAt, &user.UpdatedAt,
 		)
 		if err != nil {
 			return nil, err

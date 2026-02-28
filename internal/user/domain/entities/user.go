@@ -31,7 +31,6 @@ type User struct {
 	HireDate     time.Time   `json:"hire_date"`
 	StartTime    *string     `json:"start_time,omitempty"`
 	EndTime      *string     `json:"end_time,omitempty"`
-	PhotoURL     *string     `json:"photo_url,omitempty"`
 	CreatedAt    time.Time   `json:"created_at"`
 	UpdatedAt    time.Time   `json:"updated_at"`
 }

@@ -5,7 +5,6 @@ import (
 	"time"
 	"github.com/google/uuid"
 
-
 	"github.com/JosephAntonyDev/Notaria178_API/internal/user/domain/entities"
 )
 
@@ -13,9 +12,9 @@ func (repo *PostgresUserRepository) Create(ctx context.Context, user *entities.U
 	query := `
 		INSERT INTO users (
 			id, branch_id, full_name, email, password_hash, 
-			phone, role, status, hire_date, created_at, updated_at
+			phone, role, status, hire_date, start_time, end_time, created_at, updated_at
 		) VALUES (
-			$1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11
+			$1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13
 		)
 	`
 
@@ -29,6 +28,8 @@ func (repo *PostgresUserRepository) Create(ctx context.Context, user *entities.U
 		user.Role,
 		user.Status,
 		user.HireDate,
+		user.StartTime,
+		user.EndTime,
 		user.CreatedAt,
 		user.UpdatedAt,
 	)
@@ -43,11 +44,13 @@ func (repo *PostgresUserRepository) Create(ctx context.Context, user *entities.U
 func (repo *PostgresUserRepository) Update(ctx context.Context, user *entities.User) error {
 	query := `
 		UPDATE users 
-		SET full_name = $1, phone = $2, role = $3, branch_id = $4, updated_at = $5
-		WHERE id = $6
+		SET full_name = $1, email = $2, password_hash = $3, phone = $4, 
+		    role = $5, branch_id = $6, start_time = $7, end_time = $8, updated_at = $9
+		WHERE id = $10
 	`
 	_, err := repo.db.ExecContext(ctx, query,
-		user.FullName, user.Phone, user.Role, user.BranchID, time.Now(), user.ID,
+		user.FullName, user.Email, user.PasswordHash, user.Phone, 
+		user.Role, user.BranchID, user.StartTime, user.EndTime, time.Now(), user.ID,
 	)
 	return err
 }

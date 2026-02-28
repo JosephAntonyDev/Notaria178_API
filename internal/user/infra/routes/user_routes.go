@@ -12,20 +12,32 @@ func SetupUserRoutes(
 	r *gin.Engine, 
 	createUserCtrl *controllers.CreateUserController, 
 	loginUserCtrl *controllers.LoginUserController,
+	getProfileCtrl *controllers.GetProfileController,
+	searchUsersCtrl *controllers.SearchUsersController,
+	updateProfileCtrl *controllers.UpdateProfileController,
+	updateEmployeeCtrl *controllers.UpdateEmployeeController,
 	jwtSecret string,
 ) {
 	api := r.Group("/api/v1/users")
 	{
-		// Rutas Públicas
+		// Públicas
 		api.POST("/login", loginUserCtrl.Handle)
 
-		// Rutas Restringidas a SuperAdmin y LocalAdmin
-		adminOnly := api.Group("")
-		
-		adminOnly.Use(middleware.AuthMiddleware(jwtSecret))
-		adminOnly.Use(middleware.RequireRoles(entities.RoleSuperAdmin, entities.RoleLocalAdmin))
+		// Protegidas
+		protected := api.Group("")
+		protected.Use(middleware.AuthMiddleware(jwtSecret))
 		{
-			adminOnly.POST("/create", createUserCtrl.Handle)
+			protected.GET("/profile", getProfileCtrl.Handle)
+			protected.GET("/search", searchUsersCtrl.Handle)
+			protected.PATCH("/profile", updateProfileCtrl.Handle)
+
+			// Restringidas
+			adminOnly := protected.Group("")
+			adminOnly.Use(middleware.RequireRoles(entities.RoleSuperAdmin, entities.RoleLocalAdmin))
+			{
+				adminOnly.POST("/create", createUserCtrl.Handle)
+				adminOnly.PATCH("/update/:id", updateEmployeeCtrl.Handle)
+			}
 		}
 	}
 }

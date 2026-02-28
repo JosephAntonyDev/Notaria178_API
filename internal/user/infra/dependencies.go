@@ -19,9 +19,17 @@ func SetupDependencies(r *gin.Engine, db *sql.DB, jwtSecret string) {
 
 	createUserUseCase := app.NewCreateUserUseCase(userRepo, hasher)
 	loginUserUseCase := app.NewLoginUserUseCase(userRepo, hasher, tokenManager)
+	getProfileUseCase := app.NewGetProfileUseCase(userRepo)
+	searchUsersUseCase := app.NewSearchUsersUseCase(userRepo)
+	updateProdileUseCase := app.NewUpdateProfileUseCase(userRepo, hasher)
+	updateEmployeeUseCase := app.NewUpdateEmployeeUseCase(userRepo, hasher)
 
 	createUserCtrl := controllers.NewCreateUserController(createUserUseCase)
 	loginUserCtrl := controllers.NewLoginUserController(loginUserUseCase)
+	getProfileCtrl := controllers.NewGetProfileController(getProfileUseCase)
+	searchUsersCtrl := controllers.NewSearchUsersController(searchUsersUseCase)
+	updateProfileCtrl := controllers.NewUpdateProfileController(updateProdileUseCase)
+	updateEmployeeCtrl := controllers.NewUpdateEmployeeController(updateEmployeeUseCase)
 
-	routes.SetupUserRoutes(r, createUserCtrl, loginUserCtrl, jwtSecret)
+	routes.SetupUserRoutes(r, createUserCtrl, loginUserCtrl, getProfileCtrl, searchUsersCtrl, updateProfileCtrl, updateEmployeeCtrl, jwtSecret)
 }

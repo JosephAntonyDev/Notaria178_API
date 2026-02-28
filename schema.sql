@@ -42,7 +42,6 @@ CREATE TABLE users (
     hire_date DATE DEFAULT CURRENT_DATE,
     start_time TIME,
     end_time TIME,
-    photo_url VARCHAR(255),
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );

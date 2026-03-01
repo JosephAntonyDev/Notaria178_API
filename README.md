@@ -410,11 +410,43 @@ pytest tests/e2e/ -v
 
 ---
 
-## Contributing
+## Despliegue con Docker
 
-1. Follow the hexagonal architecture pattern established in existing modules.
-2. Domain and application layers must not import infrastructure packages.
-3. Use `context.Context` in all repository methods and database calls.
-4. Use inline role string literals in the application layer instead of importing user entities.
-5. Run `go build ./...` before committing to verify compilation.
-6. Run with the race detector periodically to catch concurrency issues.
+The entire stack (PostgreSQL, Redis, API) can be launched with a single command using Docker Compose.
+
+### Prerequisites
+
+- [Docker](https://docs.docker.com/get-docker/) and [Docker Compose](https://docs.docker.com/compose/install/) installed.
+
+### Start the stack
+
+```bash
+docker compose up -d --build
+```
+
+This will:
+1. Build the Go API image using a multi-stage Dockerfile (minimal Alpine-based image).
+2. Start a **PostgreSQL 18** container and automatically run `schema.sql` on first boot.
+3. Start a **Redis 7** container.
+4. Start the **API** container on port `8080`, waiting for healthy DB and Redis.
+
+### Stop the stack
+
+```bash
+docker compose down
+```
+
+To also remove the persisted database volume:
+
+```bash
+docker compose down -v
+```
+
+### Verify services
+
+```bash
+docker compose ps
+docker compose logs api
+```
+
+---

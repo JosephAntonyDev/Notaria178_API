@@ -54,8 +54,10 @@ class TestT01Login:
         })
         assert resp.status_code == 200, f"Login falló: {resp.text}"
         data = resp.json()
-        assert "token" in data, "La respuesta no contiene el campo 'token'"
-        state.token = data["token"]
+        # Busca el token en la raíz o dentro del envoltorio "data"
+        token = data.get("token") or data.get("data", {}).get("token")
+        assert token, f"La respuesta no contiene el token. Respuesta: {data}"
+        state.token = token
 
 
 # ─── TEST 2: Middleware — acceso sin token ──────────────────────────────────
@@ -180,14 +182,14 @@ class TestT05UpdateWorkStatus:
         resp = requests.patch(
             f"{BASE_URL}/works/status/{state.work_id}",
             headers=auth_headers(),
-            json={"status": "IN_PROGRESS"},
+            json={"status": "READY_FOR_REVIEW"},
         )
         assert resp.status_code == 200, f"Cambiar status falló: {resp.text}"
         data = resp.json()
         # Verificar que el status se actualizó
         new_status = data.get("status") or data.get("data", {}).get("status")
-        assert new_status == "IN_PROGRESS", (
-            f"Se esperaba IN_PROGRESS, se obtuvo: {new_status}"
+        assert new_status == "READY_FOR_REVIEW", (
+            f"Se esperaba READY_FOR_REVIEW, se obtuvo: {new_status}"
         )
 
 

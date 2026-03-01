@@ -12,7 +12,7 @@ import (
 	"github.com/JosephAntonyDev/Notaria178_API/internal/notification/infra/routes"
 )
 
-func SetupDependencies(r *gin.Engine, db *sql.DB, jwtSecret string) {
+func SetupDependencies(r *gin.Engine, db *sql.DB, jwtSecret string) *app.CreateNotificationUseCase {
 	notifRepo := repository.NewPostgresNotificationRepository(db)
 	hub := events.NewSSEHub()
 
@@ -20,7 +20,7 @@ func SetupDependencies(r *gin.Engine, db *sql.DB, jwtSecret string) {
 	getMyNotificationsUC := app.NewGetMyNotificationsUseCase(notifRepo)
 	markAsReadUC := app.NewMarkAsReadUseCase(notifRepo)
 	markAllReadUC := app.NewMarkAllReadUseCase(notifRepo)
-	_ = app.NewCreateNotificationUseCase(notifRepo, hub)
+	createNotifUC := app.NewCreateNotificationUseCase(notifRepo, hub)
 
 	// Controladores
 	getMyNotificationsCtrl := controllers.NewGetMyNotificationsController(getMyNotificationsUC)
@@ -29,4 +29,6 @@ func SetupDependencies(r *gin.Engine, db *sql.DB, jwtSecret string) {
 	sseCtrl := controllers.NewStreamNotificationsController(hub)
 
 	routes.SetupNotificationRoutes(r, getMyNotificationsCtrl, markAsReadCtrl, markAllReadCtrl, sseCtrl, jwtSecret)
+
+	return createNotifUC
 }

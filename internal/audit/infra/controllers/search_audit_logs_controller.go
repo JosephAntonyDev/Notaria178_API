@@ -14,9 +14,10 @@ import (
 type SearchAuditLogsQuery struct {
 	dtos.PaginationRequest
 	dtos.DateRangeRequest
-	UserID *string `form:"user_id"`
-	Action *string `form:"action"`
-	Entity *string `form:"entity"`
+	UserID   *string `form:"user_id"`
+	Action   *string `form:"action"`
+	Entity   *string `form:"entity"`
+	EntityID *string `form:"entity_id"`
 }
 
 // ─── Controller ─────────────────────────────────────────────────────────────
@@ -45,6 +46,7 @@ func (ctrl *SearchAuditLogsController) Handle(c *gin.Context) {
 		UserID:    query.UserID,
 		Action:    query.Action,
 		Entity:    query.Entity,
+		EntityID:  query.EntityID,
 		StartDate: query.StartDate,
 		EndDate:   query.EndDate,
 	}

@@ -56,3 +56,10 @@ coverage.txt
 # Archivos basura de Windows y Mac
 .DS_Store
 Thumbs.db
+
+# ==========================================
+# 7. PYTHON / QA
+# ==========================================
+__pycache__/
+*.pyc
+tests/e2e/results/*.pdf

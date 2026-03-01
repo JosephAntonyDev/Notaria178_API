@@ -3,6 +3,7 @@ package main
 import (
 	"log"
 	"os"
+	"strconv"
 
 	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
@@ -13,7 +14,9 @@ import (
 	branchInfra "github.com/JosephAntonyDev/Notaria178_API/internal/branch/infra"
 	clientInfra "github.com/JosephAntonyDev/Notaria178_API/internal/client/infra"
 	"github.com/JosephAntonyDev/Notaria178_API/internal/core"
+	"github.com/JosephAntonyDev/Notaria178_API/internal/core/cache"
 	documentInfra "github.com/JosephAntonyDev/Notaria178_API/internal/document/infra"
+	"github.com/JosephAntonyDev/Notaria178_API/internal/integration/adapters"
 	notificationInfra "github.com/JosephAntonyDev/Notaria178_API/internal/notification/infra"
 	userInfra "github.com/JosephAntonyDev/Notaria178_API/internal/user/infra"
 	workInfra "github.com/JosephAntonyDev/Notaria178_API/internal/work/infra"
@@ -35,19 +38,47 @@ func main() {
 	}
 	defer db.Close()
 
+	// ── Redis (opcional) ────────────────────────────────────────────────
+	var cachePort cache.CachePort
+	redisAddr := os.Getenv("REDIS_ADDR")
+	if redisAddr != "" {
+		redisPassword := os.Getenv("REDIS_PASSWORD")
+		redisDB := 0
+		if v := os.Getenv("REDIS_DB"); v != "" {
+			redisDB, _ = strconv.Atoi(v)
+		}
+		rc, err := cache.NewRedisCache(redisAddr, redisPassword, redisDB)
+		if err != nil {
+			log.Printf("Advertencia: Redis no disponible, continuando sin caché: %v", err)
+		} else {
+			defer rc.Close()
+			cachePort = rc
+		}
+	} else {
+		log.Println("REDIS_ADDR no configurado, el servidor iniciará sin caché Redis")
+	}
+
 	r := gin.Default()
 
 	r.Use(core.SetupCORS())
 
 	userInfra.SetupDependencies(r, db, jwtSecret)
 	attendanceInfra.SetupDependencies(r, db, jwtSecret)
-	actInfra.SetupDependencies(r, db, jwtSecret)
+	actInfra.SetupDependencies(r, db, jwtSecret, cachePort)
 	clientInfra.SetupDependencies(r, db, jwtSecret)
 	branchInfra.SetupDependencies(r, db, jwtSecret)
-	workInfra.SetupDependencies(r, db, jwtSecret)
 	documentInfra.SetupDependencies(r, db, jwtSecret)
-	notificationInfra.SetupDependencies(r, db, jwtSecret)
-	_ = auditInfra.SetupDependencies(r, db, jwtSecret) // Devuelve *LogActionUseCase para inyección futura
+
+	// Módulos que exponen sus use cases para integración cruzada
+	logActionUC := auditInfra.SetupDependencies(r, db, jwtSecret)
+	createNotifUC := notificationInfra.SetupDependencies(r, db, jwtSecret)
+
+	// Adaptadores que cumplen las interfaces de work/domain/events
+	auditAdapter := adapters.NewAuditLoggerAdapter(logActionUC)
+	notifAdapter := adapters.NewNotifierAdapter(createNotifUC)
+
+	workInfra.SetupDependencies(r, db, jwtSecret, auditAdapter, notifAdapter)
+
 	port := os.Getenv("PORT")
 	if port == "" {
 		port = "8080"

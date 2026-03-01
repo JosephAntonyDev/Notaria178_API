@@ -6,12 +6,13 @@ import (
 	"github.com/gin-gonic/gin"
 
 	"github.com/JosephAntonyDev/Notaria178_API/internal/work/app"
+	"github.com/JosephAntonyDev/Notaria178_API/internal/work/domain/events"
 	"github.com/JosephAntonyDev/Notaria178_API/internal/work/infra/controllers"
 	"github.com/JosephAntonyDev/Notaria178_API/internal/work/infra/repository"
 	"github.com/JosephAntonyDev/Notaria178_API/internal/work/infra/routes"
 )
 
-func SetupDependencies(r *gin.Engine, db *sql.DB, jwtSecret string) {
+func SetupDependencies(r *gin.Engine, db *sql.DB, jwtSecret string, audit events.AuditLogger, notifier events.Notifier) {
 	workRepo := repository.NewPostgresWorkRepository(db)
 
 	// Casos de uso
@@ -19,7 +20,7 @@ func SetupDependencies(r *gin.Engine, db *sql.DB, jwtSecret string) {
 	getWorkDetailUC := app.NewGetWorkDetailUseCase(workRepo)
 	searchWorksUC := app.NewSearchWorksUseCase(workRepo)
 	updateWorkUC := app.NewUpdateWorkUseCase(workRepo)
-	updateStatusUC := app.NewUpdateWorkStatusUseCase(workRepo)
+	updateStatusUC := app.NewUpdateWorkStatusUseCase(workRepo, audit, notifier)
 	addCollabUC := app.NewAddCollaboratorUseCase(workRepo)
 	removeCollabUC := app.NewRemoveCollaboratorUseCase(workRepo)
 	addCommentUC := app.NewAddCommentUseCase(workRepo)

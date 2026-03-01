@@ -66,6 +66,12 @@ func (r *PostgresAuditRepository) List(ctx context.Context, filters domainRepo.A
 		argID++
 	}
 
+	if filters.EntityID != nil && *filters.EntityID != "" {
+		baseQuery += ` AND entity_id = $` + strconv.Itoa(argID)
+		args = append(args, *filters.EntityID)
+		argID++
+	}
+
 	if filters.StartDate != nil && *filters.StartDate != "" {
 		baseQuery += ` AND created_at >= $` + strconv.Itoa(argID)
 		args = append(args, *filters.StartDate)

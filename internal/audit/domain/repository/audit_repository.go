@@ -14,6 +14,7 @@ type AuditFilters struct {
 	UserID    *string
 	Action    *string
 	Entity    *string
+	EntityID  *string
 	StartDate *string
 	EndDate   *string
 }

@@ -3,18 +3,22 @@ package app
 import (
 	"context"
 	"errors"
+	"fmt"
 
 	"github.com/JosephAntonyDev/Notaria178_API/internal/work/domain/entities"
+	"github.com/JosephAntonyDev/Notaria178_API/internal/work/domain/events"
 	"github.com/JosephAntonyDev/Notaria178_API/internal/work/domain/repository"
 	"github.com/google/uuid"
 )
 
 type UpdateWorkStatusUseCase struct {
-	repo repository.WorkRepository
+	repo     repository.WorkRepository
+	audit    events.AuditLogger
+	notifier events.Notifier
 }
 
-func NewUpdateWorkStatusUseCase(r repository.WorkRepository) *UpdateWorkStatusUseCase {
-	return &UpdateWorkStatusUseCase{repo: r}
+func NewUpdateWorkStatusUseCase(r repository.WorkRepository, audit events.AuditLogger, notifier events.Notifier) *UpdateWorkStatusUseCase {
+	return &UpdateWorkStatusUseCase{repo: r, audit: audit, notifier: notifier}
 }
 
 func (uc *UpdateWorkStatusUseCase) Execute(ctx context.Context, reqCtx RequestContext, workID string, req UpdateWorkStatusRequest) (*WorkDTO, error) {
@@ -48,6 +52,25 @@ func (uc *UpdateWorkStatusUseCase) Execute(ctx context.Context, reqCtx RequestCo
 
 	if err := uc.repo.UpdateStatus(ctx, work.ID, newStatus); err != nil {
 		return nil, err
+	}
+
+	oldStatus := string(work.Status)
+
+	// ─── Efectos secundarios (fire-and-forget) ──────────────────────────
+	// Auditoría
+	if uc.audit != nil {
+		userUUID, _ := uuid.Parse(reqCtx.UserID)
+		details := map[string]string{
+			"old_status": oldStatus,
+			"new_status": string(newStatus),
+		}
+		_ = uc.audit.LogAction(ctx, "STATUS_CHANGE", "WORK", work.ID, &userUUID, details)
+	}
+
+	// Notificación al proyectista principal
+	if uc.notifier != nil && work.MainDrafterID != nil {
+		msg := fmt.Sprintf("El expediente %s cambió de %s a %s", work.ID.String(), oldStatus, string(newStatus))
+		_ = uc.notifier.SendNotification(ctx, *work.MainDrafterID, &work.ID, "STATUS_CHANGE", msg)
 	}
 
 	work.Status = newStatus

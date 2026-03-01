@@ -1,0 +1,2 @@
+# Este directorio almacena los reportes PDF generados por la suite E2E.
+# Los archivos .pdf son ignorados por .gitignore.

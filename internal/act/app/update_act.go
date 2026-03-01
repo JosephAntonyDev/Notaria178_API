@@ -5,6 +5,7 @@ import (
 	"errors"
 
 	"github.com/JosephAntonyDev/Notaria178_API/internal/act/domain/repository"
+	"github.com/JosephAntonyDev/Notaria178_API/internal/core/cache"
 	"github.com/google/uuid"
 )
 
@@ -14,11 +15,12 @@ type UpdateActRequest struct {
 }
 
 type UpdateActUseCase struct {
-	repo repository.ActRepository
+	repo  repository.ActRepository
+	cache cache.CachePort
 }
 
-func NewUpdateActUseCase(r repository.ActRepository) *UpdateActUseCase {
-	return &UpdateActUseCase{repo: r}
+func NewUpdateActUseCase(r repository.ActRepository, c cache.CachePort) *UpdateActUseCase {
+	return &UpdateActUseCase{repo: r, cache: c}
 }
 
 func (uc *UpdateActUseCase) Execute(ctx context.Context, actID string, req UpdateActRequest) (*ActDTO, error) {
@@ -49,6 +51,11 @@ func (uc *UpdateActUseCase) Execute(ctx context.Context, actID string, req Updat
 
 	if err := uc.repo.Update(ctx, act); err != nil {
 		return nil, err
+	}
+
+	// Invalidar caché de búsquedas tras mutación
+	if uc.cache != nil {
+		_ = uc.cache.InvalidatePrefix(ctx, "acts:search:")
 	}
 
 	dto := ToActDTO(act)

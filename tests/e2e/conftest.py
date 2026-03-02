@@ -139,8 +139,8 @@ def _generate_pdf_report(results: list[dict], exit_status: int):
         "CORS — Configurado globalmente para peticiones cross-origin",
     ]
     for mw in middlewares:
-        pdf.cell(5, 6, chr(8226))
-        pdf.cell(0, 6, f"  {mw}", new_x="LMARGIN", new_y="NEXT")
+        pdf.cell(5, 6, "-")
+        pdf.cell(0, 6, f"  {mw}".replace("—", "-"), new_x="LMARGIN", new_y="NEXT")
     pdf.ln(5)
 
     # ── Tabla de resultados ──

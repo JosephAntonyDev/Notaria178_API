@@ -44,6 +44,7 @@ func (uc *UpdateWorkStatusUseCase) Execute(ctx context.Context, reqCtx RequestCo
 	}
 
 	newStatus := entities.WorkStatus(req.Status)
+	
 
 	// Validar transición de estado según rol
 	if err := validateStatusTransition(work, reqCtx, isCollab, newStatus); err != nil {

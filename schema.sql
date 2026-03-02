@@ -1,7 +1,7 @@
 -- ==========================================
 -- 0. DATABASE CREATION
 -- ==========================================
-CREATE DATABASE notaria178_db;
+--CREATE DATABASE notaria178_db;
 
 -- (Execute the following command only if you are in psql to change database)
 -- \c notaria178_db;
@@ -145,3 +145,26 @@ CREATE TABLE audit_logs (
     json_details JSONB, -- Stores "Before" and "After" for deep auditing
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
+
+-- ==========================================
+-- 5. INITIAL SEED DATA (Semillas)
+-- ==========================================
+
+-- 1. Crear la Sucursal Matriz (Usamos un UUID fijo para referenciarlo)
+INSERT INTO branches (id, name, address) 
+VALUES ('11111111-1111-1111-1111-111111111111', 'Sucursal Matriz', 'Centro, Tuxtla Gutiérrez')
+ON CONFLICT (id) DO NOTHING;
+
+-- 2. Crear el Usuario SUPER_ADMIN (Notario)
+-- La contraseña será "admin123" (encriptada nativamente con pgcrypto)
+INSERT INTO users (id, branch_id, full_name, email, password_hash, role, status)
+VALUES (
+    '22222222-2222-2222-2222-222222222222',
+    '11111111-1111-1111-1111-111111111111',
+    'Notario Titular',
+    'admin@notaria178.com',
+    crypt('admin123', gen_salt('bf')),
+    'SUPER_ADMIN',
+    'ACTIVE'
+)
+ON CONFLICT (email) DO NOTHING;

@@ -15,7 +15,7 @@ func SetupNotificationRoutes(
 	sseCtrl *controllers.StreamNotificationsController,
 	jwtSecret string,
 ) {
-	api := r.Group("/api/v1/notifications")
+	api := r.Group("/notifications")
 	api.Use(middleware.AuthMiddleware(jwtSecret))
 	{
 		api.GET("", getMyNotificationsCtrl.Handle)

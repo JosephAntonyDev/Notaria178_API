@@ -15,7 +15,7 @@ import requests
 
 # ─── Configuración ──────────────────────────────────────────────────────────
 
-BASE_URL = os.getenv("API_BASE_URL", "http://localhost:8080/api/v1")
+BASE_URL = os.getenv("API_BASE_URL", "http://localhost:8080")
 
 # Credenciales del SUPER_ADMIN existente en la BD
 ADMIN_EMAIL = os.getenv("ADMIN_EMAIL", "admin@notaria178.com")

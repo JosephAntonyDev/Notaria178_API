@@ -15,8 +15,8 @@ func SetupAttendanceRoutes(
 	getEmployeeAttendancesCtrl *controllers.GetEmployeeAttendancesController,
 	jwtSecret string,
 ) {
-	api := r.Group("/api/v1/attendance")
-	
+	api := r.Group("/attendance")
+
 	protected := api.Group("")
 	protected.Use(middleware.AuthMiddleware(jwtSecret))
 	{

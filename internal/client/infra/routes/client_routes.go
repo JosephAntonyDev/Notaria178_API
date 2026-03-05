@@ -14,7 +14,7 @@ func SetupClientRoutes(
 	searchClientsCtrl *controllers.SearchClientsController,
 	jwtSecret string,
 ) {
-	api := r.Group("/api/v1/clients")
+	api := r.Group("/clients")
 	api.Use(middleware.AuthMiddleware(jwtSecret))
 	{
 		api.GET("/search", searchClientsCtrl.Handle)

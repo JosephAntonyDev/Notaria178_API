@@ -54,5 +54,11 @@ func (s *LocalFileStorage) SaveFile(file *multipart.FileHeader, branchID, workID
 		return "", fmt.Errorf("error al copiar el archivo: %w", err)
 	}
 
+	// Cerrar el archivo destino antes de comprimir
+	dst.Close()
+
+	// Compresión lossless para PDFs
+	CompressPDF(fullPath)
+
 	return fullPath, nil
 }

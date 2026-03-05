@@ -2,15 +2,15 @@ package routes
 
 import (
 	"github.com/gin-gonic/gin"
-	
-	"github.com/JosephAntonyDev/Notaria178_API/internal/user/infra/controllers"
+
 	"github.com/JosephAntonyDev/Notaria178_API/internal/middleware"
 	"github.com/JosephAntonyDev/Notaria178_API/internal/user/domain/entities"
+	"github.com/JosephAntonyDev/Notaria178_API/internal/user/infra/controllers"
 )
 
 func SetupUserRoutes(
-	r *gin.Engine, 
-	createUserCtrl *controllers.CreateUserController, 
+	r *gin.Engine,
+	createUserCtrl *controllers.CreateUserController,
 	loginUserCtrl *controllers.LoginUserController,
 	getProfileCtrl *controllers.GetProfileController,
 	searchUsersCtrl *controllers.SearchUsersController,
@@ -18,7 +18,7 @@ func SetupUserRoutes(
 	updateEmployeeCtrl *controllers.UpdateEmployeeController,
 	jwtSecret string,
 ) {
-	api := r.Group("/api/v1/users")
+	api := r.Group("/users")
 	{
 		// Públicas
 		api.POST("/login", loginUserCtrl.Handle)

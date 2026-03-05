@@ -14,7 +14,7 @@ func SetupDocumentRoutes(
 	downloadCtrl *controllers.DownloadDocumentController,
 	jwtSecret string,
 ) {
-	api := r.Group("/api/v1/documents")
+	api := r.Group("/documents")
 	api.Use(middleware.AuthMiddleware(jwtSecret))
 	{
 		api.POST("/upload", uploadCtrl.Handle)

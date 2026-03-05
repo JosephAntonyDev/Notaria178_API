@@ -13,7 +13,7 @@ func SetupAuditRoutes(
 	searchCtrl *controllers.SearchAuditLogsController,
 	jwtSecret string,
 ) {
-	api := r.Group("/api/v1/audit")
+	api := r.Group("/audit")
 	api.Use(middleware.AuthMiddleware(jwtSecret))
 	api.Use(middleware.RequireRoles(entities.RoleSuperAdmin, entities.RoleLocalAdmin))
 	{

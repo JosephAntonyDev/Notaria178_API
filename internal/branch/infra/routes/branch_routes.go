@@ -15,7 +15,7 @@ func SetupBranchRoutes(
 	searchBranchesCtrl *controllers.SearchBranchesController,
 	jwtSecret string,
 ) {
-	api := r.Group("/api/v1/branches")
+	api := r.Group("/branches")
 	api.Use(middleware.AuthMiddleware(jwtSecret))
 	{
 		// Accesible para cualquier empleado logueado

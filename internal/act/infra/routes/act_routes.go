@@ -16,7 +16,7 @@ func SetupActRoutes(
 	searchActsCtrl *controllers.SearchActsController,
 	jwtSecret string,
 ) {
-	api := r.Group("/api/v1/acts")
+	api := r.Group("/acts")
 	api.Use(middleware.AuthMiddleware(jwtSecret))
 	{
 		// Accesible para cualquier empleado logueado

@@ -21,7 +21,7 @@ func SetupWorkRoutes(
 	getCommentsCtrl *controllers.GetCommentsController,
 	jwtSecret string,
 ) {
-	api := r.Group("/api/v1/works")
+	api := r.Group("/works")
 	api.Use(middleware.AuthMiddleware(jwtSecret))
 	{
 		// Búsqueda y detalle — accesible para cualquier usuario autenticado

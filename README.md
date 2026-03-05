@@ -17,11 +17,12 @@ Backend REST API for a Mexican Notary Office management system. Built with Go, f
 9. [API Endpoints](#api-endpoints)
 10. [Authentication and Authorization](#authentication-and-authorization)
 11. [Caching (Redis)](#caching-redis)
-12. [Real-Time Notifications (SSE)](#real-time-notifications-sse)
-13. [Cross-Module Integration](#cross-module-integration)
-14. [Race Detector](#race-detector)
-15. [End-to-End Tests](#end-to-end-tests)
-16. [Contributing](#contributing)
+12. [PDF Optimization](#pdf-optimization)
+13. [Real-Time Notifications (SSE)](#real-time-notifications-sse)
+14. [Cross-Module Integration](#cross-module-integration)
+15. [Race Detector](#race-detector)
+16. [End-to-End Tests](#end-to-end-tests)
+17. [Contributing](#contributing)
 
 ---
 
@@ -55,6 +56,7 @@ Cross-module communication is achieved exclusively through domain-level interfac
 | Authentication     | JWT (golang-jwt/v4)              |
 | Password Hashing   | BCrypt (golang.org/x/crypto)     |
 | CORS               | gin-contrib/cors                 |
+| PDF Optimization  | pdfcpu v0.11.1                   |
 | UUID               | google/uuid v1.6.0               |
 | Environment        | godotenv v1.5.1                  |
 
@@ -192,7 +194,7 @@ Core module. Manages legal dossiers (expedientes) with a status machine:
 Supports collaborators, comments, and cross-module integration with audit logging and notifications on status changes.
 
 ### Document
-File uploads tied to works and clients. OS-aware storage paths (Linux/Windows). Supports categories: DRAFT_DEED, FINAL_DEED, CLIENT_REQUIREMENT, OTHER.
+File uploads tied to works and clients. OS-aware storage paths (Linux/Windows). Supports categories: DRAFT_DEED, FINAL_DEED, CLIENT_REQUIREMENT, OTHER. **PDF files are automatically optimized on upload using lossless compression** (pdfcpu), reducing storage usage without any visible quality loss.
 
 ### Notification
 User notifications with real-time delivery via Server-Sent Events (SSE). Types: NEW_COMMENT, ASSIGNMENT, STATUS_CHANGE, SYSTEM.
@@ -204,86 +206,86 @@ Immutable audit trail. Records user, action, entity, entity ID, and JSONB detail
 
 ## API Endpoints
 
-### User `/api/v1/users`
+### User `/users`
 
 | Method | Path                       | Description         | Auth          |
 |--------|----------------------------|---------------------|---------------|
-| POST   | `/api/v1/users/login`      | Login (returns JWT) | Public        |
-| GET    | `/api/v1/users/profile`    | Get own profile     | Authenticated |
-| PATCH  | `/api/v1/users/profile`    | Update own profile  | Authenticated |
-| POST   | `/api/v1/users/create`     | Create employee     | Admin         |
-| PATCH  | `/api/v1/users/update/:id` | Update employee     | Admin         |
-| GET    | `/api/v1/users/search`     | Search employees    | Admin         |
+| POST   | `/users/login`      | Login (returns JWT) | Public        |
+| GET    | `/users/profile`    | Get own profile     | Authenticated |
+| PATCH  | `/users/profile`    | Update own profile  | Authenticated |
+| POST   | `/users/create`     | Create employee     | Admin         |
+| PATCH  | `/users/update/:id` | Update employee     | Admin         |
+| GET    | `/users/search`     | Search employees    | Admin         |
 
-### Attendance `/api/v1/attendance`
+### Attendance `/attendance`
 
 | Method | Path                                  | Description              | Auth          |
 |--------|---------------------------------------|--------------------------|---------------|
-| POST   | `/api/v1/attendance/check`            | Clock in / clock out     | Authenticated |
-| GET    | `/api/v1/attendance/history`          | Own attendance history   | Authenticated |
-| GET    | `/api/v1/attendance/admin/history/:id`| Employee attendance      | Admin         |
+| POST   | `/attendance/check`            | Clock in / clock out     | Authenticated |
+| GET    | `/attendance/history`          | Own attendance history   | Authenticated |
+| GET    | `/attendance/admin/history/:id`| Employee attendance      | Admin         |
 
-### Act `/api/v1/acts`
+### Act `/acts`
 
 | Method | Path                       | Description         | Auth          |
 |--------|----------------------------|---------------------|---------------|
-| GET    | `/api/v1/acts/search`      | Search acts (cached)| Authenticated |
-| POST   | `/api/v1/acts/create`      | Create act          | Admin         |
-| PATCH  | `/api/v1/acts/update/:id`  | Update act          | Admin         |
-| PATCH  | `/api/v1/acts/status/:id`  | Toggle act status   | Admin         |
+| GET    | `/acts/search`      | Search acts (cached)| Authenticated |
+| POST   | `/acts/create`      | Create act          | Admin         |
+| PATCH  | `/acts/update/:id`  | Update act          | Admin         |
+| PATCH  | `/acts/status/:id`  | Toggle act status   | Admin         |
 
-### Client `/api/v1/clients`
+### Client `/clients`
 
 | Method | Path                          | Description      | Auth          |
 |--------|-------------------------------|------------------|---------------|
-| GET    | `/api/v1/clients/search`      | Search clients   | Authenticated |
-| POST   | `/api/v1/clients/create`      | Create client    | Authenticated |
-| PATCH  | `/api/v1/clients/update/:id`  | Update client    | Authenticated |
+| GET    | `/clients/search`      | Search clients   | Authenticated |
+| POST   | `/clients/create`      | Create client    | Authenticated |
+| PATCH  | `/clients/update/:id`  | Update client    | Authenticated |
 
-### Branch `/api/v1/branches`
+### Branch `/branches`
 
 | Method | Path                           | Description      | Auth          |
 |--------|--------------------------------|------------------|---------------|
-| GET    | `/api/v1/branches/search`      | Search branches  | Authenticated |
-| POST   | `/api/v1/branches/create`      | Create branch    | Admin         |
-| PATCH  | `/api/v1/branches/update/:id`  | Update branch    | Admin         |
+| GET    | `/branches/search`      | Search branches  | Authenticated |
+| POST   | `/branches/create`      | Create branch    | Admin         |
+| PATCH  | `/branches/update/:id`  | Update branch    | Admin         |
 
-### Work `/api/v1/works`
+### Work `/works`
 
 | Method | Path                                          | Description           | Auth          |
 |--------|-----------------------------------------------|-----------------------|---------------|
-| GET    | `/api/v1/works/search`                        | Search works          | Authenticated |
-| GET    | `/api/v1/works/:id`                           | Get work detail       | Authenticated |
-| POST   | `/api/v1/works/create`                        | Create work           | Managers      |
-| PATCH  | `/api/v1/works/update/:id`                    | Update work           | Managers      |
-| PATCH  | `/api/v1/works/status/:id`                    | Update work status    | Managers      |
-| GET    | `/api/v1/works/:id/comments`                  | List work comments    | Authenticated |
-| POST   | `/api/v1/works/:id/comments`                  | Add comment           | Authenticated |
-| POST   | `/api/v1/works/:id/collaborators`             | Add collaborator      | Managers      |
-| DELETE | `/api/v1/works/:id/collaborators/:userId`     | Remove collaborator   | Managers      |
+| GET    | `/works/search`                        | Search works          | Authenticated |
+| GET    | `/works/:id`                           | Get work detail       | Authenticated |
+| POST   | `/works/create`                        | Create work           | Managers      |
+| PATCH  | `/works/update/:id`                    | Update work           | Managers      |
+| PATCH  | `/works/status/:id`                    | Update work status    | Managers      |
+| GET    | `/works/:id/comments`                  | List work comments    | Authenticated |
+| POST   | `/works/:id/comments`                  | Add comment           | Authenticated |
+| POST   | `/works/:id/collaborators`             | Add collaborator      | Managers      |
+| DELETE | `/works/:id/collaborators/:userId`     | Remove collaborator   | Managers      |
 
-### Document `/api/v1/documents`
+### Document `/documents`
 
 | Method | Path                                   | Description          | Auth          |
 |--------|----------------------------------------|----------------------|---------------|
-| POST   | `/api/v1/documents/upload`             | Upload document      | Authenticated |
-| GET    | `/api/v1/documents/work/:work_id`      | List work documents  | Authenticated |
-| GET    | `/api/v1/documents/download/:id`       | Download document    | Authenticated |
+| POST   | `/documents/upload`             | Upload document      | Authenticated |
+| GET    | `/documents/work/:work_id`      | List work documents  | Authenticated |
+| GET    | `/documents/download/:id`       | Download document    | Authenticated |
 
-### Notification `/api/v1/notifications`
+### Notification `/notifications`
 
 | Method | Path                                   | Description               | Auth          |
 |--------|-----------------------------------------|--------------------------|---------------|
-| GET    | `/api/v1/notifications`                | List my notifications     | Authenticated |
-| GET    | `/api/v1/notifications/stream`         | SSE real-time stream      | Authenticated |
-| PATCH  | `/api/v1/notifications/:id/read`       | Mark as read              | Authenticated |
-| PATCH  | `/api/v1/notifications/read-all`       | Mark all as read          | Authenticated |
+| GET    | `/notifications`                | List my notifications     | Authenticated |
+| GET    | `/notifications/stream`         | SSE real-time stream      | Authenticated |
+| PATCH  | `/notifications/:id/read`       | Mark as read              | Authenticated |
+| PATCH  | `/notifications/read-all`       | Mark all as read          | Authenticated |
 
-### Audit `/api/v1/audit`
+### Audit `/audit`
 
 | Method | Path                       | Description          | Auth  |
 |--------|----------------------------|----------------------|-------|
-| GET    | `/api/v1/audit/search`     | Search audit logs    | Admin |
+| GET    | `/audit/search`     | Search audit logs    | Admin |
 
 **Total: 30 endpoints (1 public, 29 protected)**
 
@@ -336,11 +338,42 @@ All Redis errors are handled gracefully — on failure, the operation falls back
 
 ---
 
+## PDF Optimization
+
+PDF files uploaded via the document module are automatically optimized using **pdfcpu** (lossless compression). This reduces storage consumption without any visible quality loss.
+
+### How It Works
+
+1. User uploads a document via `POST /documents/upload`.
+2. The file is saved to disk.
+3. If the file extension is `.pdf`, the storage layer applies `pdfcpu.Optimize`:
+   - Removes duplicate and unused objects.
+   - Optimizes cross-reference tables and object streams.
+   - Deflates stream data where possible.
+4. If the optimized file is **smaller**, it replaces the original. Otherwise, the original is kept.
+5. The operation is transparent — the upload succeeds regardless of optimization outcome.
+
+### Characteristics
+
+| Property             | Value                                                     |
+|----------------------|-----------------------------------------------------------|
+| Library              | pdfcpu v0.11.1 (pure Go, no external dependencies)        |
+| Compression type     | Lossless — zero visible quality loss                       |
+| Typical reduction    | 10–40% for PDFs from office software, scanners, or tools  |
+| Failure handling     | Graceful — errors are logged, upload is never blocked      |
+| Non-PDF files        | Skipped automatically                                      |
+
+### Architecture
+
+The compression logic lives entirely in the infrastructure layer (`document/infra/storage/pdf_compressor.go`), consistent with Hexagonal Architecture. The domain and application layers have no knowledge of compression — it is an infrastructure-level optimization.
+
+---
+
 ## Real-Time Notifications (SSE)
 
 The notification module includes a Server-Sent Events hub for real-time delivery:
 
-1. Client connects to `GET /api/v1/notifications/stream` with a valid JWT.
+1. Client connects to `GET /notifications/stream` with a valid JWT.
 2. The SSEHub registers the client channel keyed by user ID.
 3. When a notification is created (e.g., from a work status change), `CreateNotificationUseCase` calls `Broadcast()`.
 4. The SSEHub pushes the event to the connected client's channel.

@@ -15,6 +15,7 @@ import (
 	clientInfra "github.com/JosephAntonyDev/Notaria178_API/internal/client/infra"
 	"github.com/JosephAntonyDev/Notaria178_API/internal/core"
 	"github.com/JosephAntonyDev/Notaria178_API/internal/core/cache"
+	dashboardInfra "github.com/JosephAntonyDev/Notaria178_API/internal/dashboard/infra"
 	documentInfra "github.com/JosephAntonyDev/Notaria178_API/internal/document/infra"
 	"github.com/JosephAntonyDev/Notaria178_API/internal/integration/adapters"
 	notificationInfra "github.com/JosephAntonyDev/Notaria178_API/internal/notification/infra"
@@ -68,6 +69,7 @@ func main() {
 	clientInfra.SetupDependencies(r, db, jwtSecret)
 	branchInfra.SetupDependencies(r, db, jwtSecret)
 	documentInfra.SetupDependencies(r, db, jwtSecret)
+	dashboardInfra.SetupDependencies(r, db, jwtSecret, cachePort)
 
 	// Módulos que exponen sus use cases para integración cruzada
 	logActionUC := auditInfra.SetupDependencies(r, db, jwtSecret)

@@ -20,9 +20,9 @@ Backend REST API for a Mexican Notary Office management system. Built with Go, f
 12. [PDF Optimization](#pdf-optimization)
 13. [Real-Time Notifications (SSE)](#real-time-notifications-sse)
 14. [Cross-Module Integration](#cross-module-integration)
-15. [Race Detector](#race-detector)
-16. [End-to-End Tests](#end-to-end-tests)
-17. [Contributing](#contributing)
+15. [Docker Deployment](#docker-deployment)
+16. [Race Detector](#race-detector)
+17. [End-to-End Tests](#end-to-end-tests)
 
 ---
 
@@ -137,6 +137,8 @@ Notaria178_API/
   main.go                          -- Entry point and dependency wiring
   go.mod / go.sum                  -- Go module definition
   schema.sql                       -- PostgreSQL DDL
+  Dockerfile                       -- Multi-stage build (Alpine)
+  docker-compose.yml               -- Full stack: PostgreSQL + Redis + API
   run_with_race_detector.sh        -- Race detector script (Linux/macOS)
   run_with_race_detector.bat       -- Race detector script (Windows)
   tests/
@@ -149,8 +151,6 @@ Notaria178_API/
         redis_adapter.go           -- CachePort interface + Redis implementation
       dtos/
         pagination.go              -- PaginationRequest, DateRangeRequest, PaginatedResponse
-      domain/ports/
-        cache_repository.go        -- Legacy cache interface (unused)
     middleware/
       auth.go                      -- JWT extraction + role-based authorization
     integration/
@@ -166,6 +166,7 @@ Notaria178_API/
     document/                      -- File upload/download with OS-aware storage
     notification/                  -- Notifications + SSE real-time streaming
     audit/                         -- Audit log recording and search
+    dashboard/                     -- Analytics dashboard (cached aggregations)
 ```
 
 ---
@@ -201,6 +202,9 @@ User notifications with real-time delivery via Server-Sent Events (SSE). Types: 
 
 ### Audit
 Immutable audit trail. Records user, action, entity, entity ID, and JSONB details (before/after snapshots). Search endpoint restricted to admin roles.
+
+### Dashboard (Cached)
+Analytics module that powers the control panel. Provides 6 aggregation endpoints for KPIs, trends, status distribution, recent activity, top drafters, and most common act types. All queries use optimized PostgreSQL aggregations (`COUNT FILTER`, `date_trunc`, `GROUP BY`) and are cached in Redis with a 5-minute TTL (3 minutes for activity). Restricted to SUPER_ADMIN and LOCAL_ADMIN roles.
 
 ---
 
@@ -287,7 +291,27 @@ Immutable audit trail. Records user, action, entity, entity ID, and JSONB detail
 |--------|----------------------------|----------------------|-------|
 | GET    | `/audit/search`     | Search audit logs    | Admin |
 
-**Total: 30 endpoints (1 public, 29 protected)**
+### Dashboard `/dashboard`
+
+All dashboard endpoints accept these common query parameters:
+
+| Param | Type | Default | Description |
+|---|---|---|---|
+| `timeframe` | string | `month` | `today`, `week`, `month`, `3months`, `6months`, `9months`, `year`, `all` |
+| `branch_id` | UUID | all | Filter by specific branch |
+| `start_date` | string | — | Manual start date (YYYY-MM-DD), overrides `timeframe` |
+| `end_date` | string | — | Manual end date (YYYY-MM-DD), overrides `timeframe` |
+
+| Method | Path | Description | Extra Params | Auth |
+|--------|------|-------------|--------------|------|
+| GET | `/dashboard/kpis` | Work counts by status | — | Admin |
+| GET | `/dashboard/trend` | Created vs approved over time | `group_by` (day/week/month) | Admin |
+| GET | `/dashboard/distribution` | Status distribution (donut chart) | — | Admin |
+| GET | `/dashboard/activity` | Recent audit activity with user names | `user_id`, `entity_id`, `limit`, `offset` | Admin |
+| GET | `/dashboard/top-drafters` | Most active drafters by work count | `limit` | Admin |
+| GET | `/dashboard/top-acts` | Most common act types | `limit` | Admin |
+
+**Total: 36 endpoints (1 public, 35 protected)**
 
 ---
 
@@ -325,7 +349,7 @@ The cache layer follows the Ports & Adapters pattern:
 - **Port**: `cache.CachePort` interface (Set, Get, Invalidate, InvalidatePrefix)
 - **Adapter**: `cache.RedisCache` using go-redis/v9
 
-### Cache Strategy (Act Module)
+### Cache Strategy: Act Module
 
 | Operation      | Behavior                                                    |
 |----------------|-------------------------------------------------------------|
@@ -333,6 +357,19 @@ The cache layer follows the Ports & Adapters pattern:
 | Create act     | Invalidate all keys with prefix `acts:search:`.             |
 | Update act     | Invalidate all keys with prefix `acts:search:`.             |
 | Toggle status  | Invalidate all keys with prefix `acts:search:`.             |
+
+### Cache Strategy: Dashboard Module
+
+All 6 dashboard endpoints use the Cache-Aside pattern with deterministic keys:
+
+| Endpoint | Cache Key Pattern | TTL |
+|---|---|---|
+| KPIs | `dashboard:kpis:{branch}:{start}:{end}` | 5 min |
+| Trend | `dashboard:trend:{branch}:{start}:{end}:{group_by}` | 5 min |
+| Distribution | `dashboard:dist:{branch}:{start}:{end}` | 5 min |
+| Activity | `dashboard:activity:{branch}:{user}:{entity}:{start}:{end}:{limit}:{offset}` | 3 min |
+| Top Drafters | `dashboard:topdrafters:{branch}:{start}:{end}:{limit}` | 5 min |
+| Top Acts | `dashboard:topacts:{branch}:{start}:{end}:{limit}` | 5 min |
 
 All Redis errors are handled gracefully — on failure, the operation falls back to the database without interrupting the request.
 
@@ -400,6 +437,57 @@ Adapters are created in `main.go` and injected into the work module at startup.
 
 ---
 
+## Docker Deployment
+
+The entire stack (PostgreSQL, Redis, API) can be launched with a single command using Docker Compose.
+
+### Prerequisites
+
+- [Docker](https://docs.docker.com/get-docker/) and [Docker Compose](https://docs.docker.com/compose/install/) installed.
+
+### Start the stack
+
+```bash
+docker compose up -d --build
+```
+
+This will:
+1. Build the Go API image using a multi-stage Dockerfile (Alpine-based, non-root user).
+2. Start a **PostgreSQL 18** container and automatically run `schema.sql` on first boot.
+3. Start a **Redis 7** container.
+4. Start the **API** container on port `8080`, waiting for healthy DB and Redis.
+
+### Stop the stack
+
+```bash
+docker compose down
+```
+
+To also remove the persisted database volume:
+
+```bash
+docker compose down -v
+```
+
+### Verify services
+
+```bash
+docker compose ps
+docker compose logs api
+```
+
+### Docker Architecture
+
+| Service | Image | Port | Health Check |
+|---------|-------|------|--------------|
+| `db` | postgres:18-alpine | 5432 | `pg_isready` |
+| `redis` | redis:7-alpine | 6379 | `redis-cli ping` |
+| `api` | Custom (multi-stage Go build) | 8080 | Depends on db + redis |
+
+The API container runs as a non-root user (`appuser`) for security. Uploaded files are persisted via a volume mount to `./uploads`.
+
+---
+
 ## Race Detector
 
 Go's built-in race detector can be used to verify concurrent safety (particularly for the SSE hub):
@@ -442,44 +530,5 @@ pytest tests/e2e/ -v
 - Results saved to `tests/e2e/` directory
 
 ---
-
-## Despliegue con Docker
-
-The entire stack (PostgreSQL, Redis, API) can be launched with a single command using Docker Compose.
-
-### Prerequisites
-
-- [Docker](https://docs.docker.com/get-docker/) and [Docker Compose](https://docs.docker.com/compose/install/) installed.
-
-### Start the stack
-
-```bash
-docker compose up -d --build
-```
-
-This will:
-1. Build the Go API image using a multi-stage Dockerfile (minimal Alpine-based image).
-2. Start a **PostgreSQL 18** container and automatically run `schema.sql` on first boot.
-3. Start a **Redis 7** container.
-4. Start the **API** container on port `8080`, waiting for healthy DB and Redis.
-
-### Stop the stack
-
-```bash
-docker compose down
-```
-
-To also remove the persisted database volume:
-
-```bash
-docker compose down -v
-```
-
-### Verify services
-
-```bash
-docker compose ps
-docker compose logs api
-```
 
 ---

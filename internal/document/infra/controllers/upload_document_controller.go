@@ -49,12 +49,21 @@ func (ctrl *UploadDocumentController) Handle(c *gin.Context) {
 		clientID = &clientIDStr
 	}
 
+	var branchIDStr string
+	if branchID != nil {
+		branchIDStr = branchID.(string)
+	}
+	var userIDStr string
+	if userID != nil {
+		userIDStr = userID.(string)
+	}
+
 	input := app.UploadDocumentInput{
 		File:         file,
-		BranchID:     branchID.(string),
+		BranchID:     branchIDStr,
 		WorkID:       workID,
 		ClientID:     clientID,
-		UserID:       userID.(string),
+		UserID:       userIDStr,
 		DocumentName: documentName,
 		Category:     category,
 	}

@@ -33,7 +33,7 @@ func (r *PostgresDashboardRepository) GetKPIs(ctx context.Context, filters domai
 	args := []interface{}{filters.StartDate, filters.EndDate}
 	argID := 3
 
-	if filters.BranchID != nil && *filters.BranchID != "" {
+	if filters.BranchID != nil && *filters.BranchID != "" && *filters.BranchID != "all" {
 		query += ` AND branch_id = $` + strconv.Itoa(argID)
 		args = append(args, *filters.BranchID)
 	}
@@ -69,7 +69,7 @@ func (r *PostgresDashboardRepository) GetTrend(ctx context.Context, filters doma
 	args := []interface{}{filters.StartDate, filters.EndDate}
 	argID := 3
 
-	if filters.BranchID != nil && *filters.BranchID != "" {
+	if filters.BranchID != nil && *filters.BranchID != "" && *filters.BranchID != "all" {
 		query += ` AND branch_id = $` + strconv.Itoa(argID)
 		args = append(args, *filters.BranchID)
 	}
@@ -104,7 +104,7 @@ func (r *PostgresDashboardRepository) GetDistribution(ctx context.Context, filte
 	args := []interface{}{filters.StartDate, filters.EndDate}
 	argID := 3
 
-	if filters.BranchID != nil && *filters.BranchID != "" {
+	if filters.BranchID != nil && *filters.BranchID != "" && *filters.BranchID != "all" {
 		query += ` AND branch_id = $` + strconv.Itoa(argID)
 		args = append(args, *filters.BranchID)
 	}
@@ -141,7 +141,7 @@ func (r *PostgresDashboardRepository) GetRecentActivity(ctx context.Context, fil
 	args := []interface{}{filters.StartDate, filters.EndDate}
 	argID := 3
 
-	if filters.BranchID != nil && *filters.BranchID != "" {
+	if filters.BranchID != nil && *filters.BranchID != "" && *filters.BranchID != "all" {
 		countQuery += ` AND u.branch_id = $` + strconv.Itoa(argID)
 		args = append(args, *filters.BranchID)
 		argID++
@@ -173,7 +173,7 @@ func (r *PostgresDashboardRepository) GetRecentActivity(ctx context.Context, fil
 	dataArgs := []interface{}{filters.StartDate, filters.EndDate}
 	dataArgID := 3
 
-	if filters.BranchID != nil && *filters.BranchID != "" {
+	if filters.BranchID != nil && *filters.BranchID != "" && *filters.BranchID != "all" {
 		dataQuery += ` AND u.branch_id = $` + strconv.Itoa(dataArgID)
 		dataArgs = append(dataArgs, *filters.BranchID)
 		dataArgID++
@@ -224,7 +224,7 @@ func (r *PostgresDashboardRepository) GetTopDrafters(ctx context.Context, filter
 	args := []interface{}{filters.StartDate, filters.EndDate}
 	argID := 3
 
-	if filters.BranchID != nil && *filters.BranchID != "" {
+	if filters.BranchID != nil && *filters.BranchID != "" && *filters.BranchID != "all" {
 		query += ` AND u.branch_id = $` + strconv.Itoa(argID)
 		args = append(args, *filters.BranchID)
 		argID++
@@ -263,7 +263,7 @@ func (r *PostgresDashboardRepository) GetTopActs(ctx context.Context, filters do
 	args := []interface{}{filters.StartDate, filters.EndDate}
 	argID := 3
 
-	if filters.BranchID != nil && *filters.BranchID != "" {
+	if filters.BranchID != nil && *filters.BranchID != "" && *filters.BranchID != "all" {
 		query += ` AND w.branch_id = $` + strconv.Itoa(argID)
 		args = append(args, *filters.BranchID)
 		argID++

@@ -16,6 +16,7 @@ type WorkFilters struct {
 	ScopedUserID *string // solo trabajos donde el usuario es proyectista o colaborador
 	StartDate    *string // filtro created_at >= (formato YYYY-MM-DD)
 	EndDate      *string // filtro created_at <= (formato YYYY-MM-DD)
+	Sort         *string // sorting
 }
 
 type WorkRepository interface {

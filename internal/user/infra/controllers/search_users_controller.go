@@ -1,6 +1,7 @@
 package controllers
 
 import (
+	"fmt"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -11,10 +12,13 @@ import (
 
 type SearchUsersQuery struct {
 	dtos.PaginationRequest
-	Search   *string `form:"search"`
-	Status   *string `form:"status"`
-	Role     *string `form:"role"`
-	BranchID *string `form:"branch_id"`
+	Search    *string `form:"search"`
+	Status    *string `form:"status"`
+	Role      *string `form:"role"`
+	BranchID  *string `form:"branch_id"`
+	StartDate *string `form:"start_date"`
+	EndDate   *string `form:"end_date"`
+	Sort      *string `form:"sort"`
 }
 
 type SearchUsersController struct {
@@ -36,6 +40,16 @@ func (ctrl *SearchUsersController) Handle(c *gin.Context) {
 		return
 	}
 
+	fmt.Printf("[DEBUG] /users/search params | Limit: %d, Offset: %d", query.Limit, query.Offset)
+	if query.Search != nil { fmt.Printf(", Search: %s", *query.Search) }
+	if query.Status != nil { fmt.Printf(", Status: %s", *query.Status) }
+	if query.Role != nil { fmt.Printf(", Role: %s", *query.Role) }
+	if query.BranchID != nil { fmt.Printf(", BranchID: %s", *query.BranchID) }
+	if query.StartDate != nil { fmt.Printf(", StartDate: %s", *query.StartDate) }
+	if query.EndDate != nil { fmt.Printf(", EndDate: %s", *query.EndDate) }
+	if query.Sort != nil { fmt.Printf(", Sort: %s", *query.Sort) }
+	fmt.Println()
+
 	var filters entities.UserFilters
 	filters.Limit = query.Limit
 	filters.Offset = query.Offset
@@ -43,15 +57,18 @@ func (ctrl *SearchUsersController) Handle(c *gin.Context) {
 	filters.Status = query.Status
 	filters.Role = query.Role
 	filters.BranchID = query.BranchID
+	filters.StartDate = query.StartDate
+	filters.EndDate = query.EndDate
+	filters.Sort = query.Sort
 
-	users, err := ctrl.useCase.Execute(c.Request.Context(), filters)
+	users, total, err := ctrl.useCase.Execute(c.Request.Context(), filters)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error interno al buscar usuarios"})
 		return
 	}
 
 	c.JSON(http.StatusOK, dtos.PaginatedResponse{
-		Total: len(users), 
+		Total: total, 
 		Data:  users,
 	})
 }

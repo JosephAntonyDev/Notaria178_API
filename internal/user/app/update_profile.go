@@ -10,9 +10,12 @@ import (
 )
 
 type UpdateProfileRequest struct {
-	Email    *string `json:"email,omitempty" binding:"omitempty,email"`
-	Phone    *string `json:"phone,omitempty"`
-	Password *string `json:"password,omitempty" binding:"omitempty,min=6"`
+	FullName  *string `json:"full_name,omitempty"`
+	Email     *string `json:"email,omitempty" binding:"omitempty,email"`
+	Phone     *string `json:"phone,omitempty"`
+	Password  *string `json:"password,omitempty" binding:"omitempty,min=6"`
+	StartTime *string `json:"start_time,omitempty"`
+	EndTime   *string `json:"end_time,omitempty"`
 }
 
 type UpdateProfileUseCase struct {
@@ -41,6 +44,26 @@ func (uc *UpdateProfileUseCase) Execute(ctx context.Context, userID string, req 
 			return errors.New("el correo electrónico ya está en uso")
 		}
 		user.Email = *req.Email
+	}
+
+	if req.FullName != nil && *req.FullName != "" {
+		user.FullName = *req.FullName
+	}
+
+	if req.StartTime != nil {
+		if *req.StartTime == "" {
+			user.StartTime = nil
+		} else {
+			user.StartTime = req.StartTime
+		}
+	}
+
+	if req.EndTime != nil {
+		if *req.EndTime == "" {
+			user.EndTime = nil
+		} else {
+			user.EndTime = req.EndTime
+		}
 	}
 
 	if req.Phone != nil {

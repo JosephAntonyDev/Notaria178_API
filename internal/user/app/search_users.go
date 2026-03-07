@@ -15,16 +15,16 @@ func NewSearchUsersUseCase(r repository.UserRepository) *SearchUsersUseCase {
 }
 
 // Ahora recibe repository.UserFilters
-func (uc *SearchUsersUseCase) Execute(ctx context.Context, filters entities.UserFilters) ([]UserPublicDTO, error) {
-	users, err := uc.repo.List(ctx, filters)
+func (uc *SearchUsersUseCase) Execute(ctx context.Context, filters entities.UserFilters) ([]UserPublicDTO, int, error) {
+	users, total, err := uc.repo.List(ctx, filters)
 	if err != nil {
-		return nil, err
+		return nil, 0, err
 	}
 
 	usersDTO := make([]UserPublicDTO, 0)
 	for _, u := range users {
-		usersDTO = append(usersDTO, ToUserPublicDTO(u))
+		usersDTO = append(usersDTO, ToUserPublicDTO(u, nil))
 	}
 
-	return usersDTO, nil
+	return usersDTO, total, nil
 }

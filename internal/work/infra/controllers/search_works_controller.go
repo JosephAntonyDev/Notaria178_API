@@ -2,6 +2,7 @@ package controllers
 
 import (
 	"net/http"
+	importLog "log"
 
 	"github.com/JosephAntonyDev/Notaria178_API/internal/core/dtos"
 	"github.com/JosephAntonyDev/Notaria178_API/internal/work/app"
@@ -15,6 +16,7 @@ type SearchWorksQuery struct {
 	Search   *string `form:"search"`
 	Status   *string `form:"status"`
 	BranchID *string `form:"branch_id"`
+	Sort     *string `form:"sort"`
 }
 
 type SearchWorksController struct {
@@ -48,16 +50,31 @@ func (ctrl *SearchWorksController) Handle(c *gin.Context) {
 		BranchID:  query.BranchID,
 		StartDate: query.StartDate,
 		EndDate:   query.EndDate,
+		Sort:      query.Sort,
+	}
+
+	var userRoleStr string
+	if userRole != nil {
+		userRoleStr = userRole.(string)
+	}
+	var userIDStr string
+	if userID != nil {
+		userIDStr = userID.(string)
+	}
+	var branchIDStr string
+	if branchID != nil {
+		branchIDStr = branchID.(string)
 	}
 
 	works, err := ctrl.useCase.Execute(
 		c.Request.Context(),
-		userRole.(string),
-		userID.(string),
-		branchID.(string),
+		userRoleStr,
+		userIDStr,
+		branchIDStr,
 		filters,
 	)
 	if err != nil {
+		importLog.Printf("SearchWorksController Error: %v", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error interno al buscar trabajos"})
 		return
 	}

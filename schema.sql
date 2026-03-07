@@ -150,21 +150,66 @@ CREATE TABLE audit_logs (
 -- 5. INITIAL SEED DATA (Semillas)
 -- ==========================================
 
--- 1. Crear la Sucursal Matriz (Usamos un UUID fijo para referenciarlo)
+-- 1. Crear las Sucursales
 INSERT INTO branches (id, name, address) 
-VALUES ('11111111-1111-1111-1111-111111111111', 'Sucursal Matriz', 'Centro, Tuxtla Gutiérrez')
+VALUES ('11111111-1111-1111-1111-111111111111', 'Tuxtla Gutiérrez', 'Centro, Tuxtla Gutiérrez')
 ON CONFLICT (id) DO NOTHING;
 
--- 2. Crear el Usuario SUPER_ADMIN (Notario)
+INSERT INTO branches (id, name, address) 
+VALUES ('bbbbbbbb-1111-1111-1111-111111111111', 'San Fernando', 'Centro, San Fernando')
+ON CONFLICT (id) DO NOTHING;
+
+INSERT INTO branches (id, name, address) 
+VALUES ('cccccccc-1111-1111-1111-111111111111', 'CDMX', 'Polanco, CDMX')
+ON CONFLICT (id) DO NOTHING;
+
+-- 2. Crear el Usuario SUPER_ADMIN (Notario Titular)
 -- La contraseña será "admin123" (encriptada nativamente con pgcrypto)
 INSERT INTO users (id, branch_id, full_name, email, password_hash, role, status)
 VALUES (
     '22222222-2222-2222-2222-222222222222',
-    '11111111-1111-1111-1111-111111111111',
+    NULL, -- El Notario Titular tiene visión global, sin sucursal fija por defecto
     'Notario Titular',
     'admin@notaria178.com',
     crypt('admin123', gen_salt('bf')),
     'SUPER_ADMIN',
+    'ACTIVE'
+)
+ON CONFLICT (email) DO NOTHING;
+
+-- 3. Crear 3 Proyectistas (DRAFTER)
+INSERT INTO users (id, branch_id, full_name, email, password_hash, role, status)
+VALUES (
+    'd1111111-1111-1111-1111-111111111111',
+    '11111111-1111-1111-1111-111111111111',
+    'Proyectista Tuxtla',
+    'tuxtla@notaria178.com',
+    crypt('password123', gen_salt('bf')),
+    'DRAFTER',
+    'ACTIVE'
+)
+ON CONFLICT (email) DO NOTHING;
+
+INSERT INTO users (id, branch_id, full_name, email, password_hash, role, status)
+VALUES (
+    'd2222222-2222-2222-2222-222222222222',
+    'bbbbbbbb-1111-1111-1111-111111111111',
+    'Proyectista San Fernando',
+    'sanfernando@notaria178.com',
+    crypt('password123', gen_salt('bf')),
+    'DRAFTER',
+    'ACTIVE'
+)
+ON CONFLICT (email) DO NOTHING;
+
+INSERT INTO users (id, branch_id, full_name, email, password_hash, role, status)
+VALUES (
+    'd3333333-3333-3333-3333-333333333333',
+    'cccccccc-1111-1111-1111-111111111111',
+    'Proyectista CDMX',
+    'cdmx@notaria178.com',
+    crypt('password123', gen_salt('bf')),
+    'DRAFTER',
     'ACTIVE'
 )
 ON CONFLICT (email) DO NOTHING;

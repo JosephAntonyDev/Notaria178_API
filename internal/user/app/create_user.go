@@ -17,8 +17,10 @@ type CreateUserRequest struct {
 	Email    string  `json:"email" binding:"required,email"`
 	Password string  `json:"password" binding:"required,min=6"`
 	Role     string  `json:"role" binding:"required"`
-	BranchID *string `json:"branch_id,omitempty"`
-	Phone    *string `json:"phone,omitempty"`
+	BranchID  *string `json:"branch_id,omitempty"`
+	Phone     *string `json:"phone,omitempty"`
+	StartTime *string `json:"start_time,omitempty"`
+	EndTime   *string `json:"end_time,omitempty"`
 }
 
 type CreateUserUseCase struct {
@@ -67,6 +69,8 @@ func (uc *CreateUserUseCase) Execute(ctx context.Context, requesterRole string, 
 		Role:         entities.UserRole(req.Role),
 		Status:       entities.StatusActive,
 		HireDate:     time.Now(),
+		StartTime:    req.StartTime,
+		EndTime:      req.EndTime,
 		CreatedAt:    time.Now(),
 		UpdatedAt:    time.Now(),
 	}

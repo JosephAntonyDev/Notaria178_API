@@ -12,6 +12,7 @@ import (
 type UpdateActRequest struct {
 	Name        *string `json:"name,omitempty"`
 	Description *string `json:"description,omitempty"`
+	Category    *string `json:"category,omitempty"`
 }
 
 type UpdateActUseCase struct {
@@ -47,6 +48,10 @@ func (uc *UpdateActUseCase) Execute(ctx context.Context, actID string, req Updat
 
 	if req.Description != nil {
 		act.Description = req.Description
+	}
+
+	if req.Category != nil {
+		act.Category = *req.Category
 	}
 
 	if err := uc.repo.Update(ctx, act); err != nil {

@@ -1,7 +1,7 @@
 package dtos
 
 type PaginationRequest struct {
-	Limit  int `form:"limit" binding:"omitempty,min=1,max=100"`
+	Limit  int `form:"limit" binding:"omitempty,min=1,max=1000"`
 	Offset int `form:"offset" binding:"omitempty,min=0"`
 }
 

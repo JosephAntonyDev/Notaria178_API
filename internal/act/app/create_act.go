@@ -13,6 +13,7 @@ import (
 type CreateActRequest struct {
 	Name        string  `json:"name" binding:"required"`
 	Description *string `json:"description,omitempty"`
+	Category    string  `json:"category" binding:"required"`
 }
 
 type CreateActUseCase struct {
@@ -34,6 +35,7 @@ func (uc *CreateActUseCase) Execute(ctx context.Context, req CreateActRequest) (
 		ID:          uuid.New(),
 		Name:        req.Name,
 		Description: req.Description,
+		Category:    req.Category,
 		Status:      entities.StatusActive,
 	}
 

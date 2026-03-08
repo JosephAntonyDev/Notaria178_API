@@ -76,9 +76,10 @@ func (rc *RedisCache) Invalidate(ctx context.Context, key string) error {
 }
 
 // InvalidatePrefix elimina todas las keys que coincidan con un patrón glob.
-// Ejemplo: "acts:search:*" borra todas las búsquedas cacheadas de actos.
+// Ejemplo: prefix "acts:search:" se convierte en "acts:search:*" para borrar todas las búsquedas cacheadas.
 func (rc *RedisCache) InvalidatePrefix(ctx context.Context, prefix string) error {
-	iter := rc.client.Scan(ctx, 0, prefix, 100).Iterator()
+	pattern := prefix + "*"
+	iter := rc.client.Scan(ctx, 0, pattern, 100).Iterator()
 	var keys []string
 	for iter.Next(ctx) {
 		keys = append(keys, iter.Val())
@@ -87,6 +88,7 @@ func (rc *RedisCache) InvalidatePrefix(ctx context.Context, prefix string) error
 		return err
 	}
 	if len(keys) > 0 {
+		fmt.Printf("[CACHE] Invalidando %d keys con patrón '%s'\n", len(keys), pattern)
 		return rc.client.Del(ctx, keys...).Err()
 	}
 	return nil

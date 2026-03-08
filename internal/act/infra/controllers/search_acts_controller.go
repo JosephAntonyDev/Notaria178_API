@@ -1,6 +1,7 @@
 package controllers
 
 import (
+	"log"
 	"net/http"
 
 	"github.com/JosephAntonyDev/Notaria178_API/internal/act/app"
@@ -43,7 +44,8 @@ func (ctrl *SearchActsController) Handle(c *gin.Context) {
 
 	acts, err := ctrl.useCase.Execute(c.Request.Context(), filters)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error interno al buscar actos"})
+		log.Printf("[ERROR] SearchActs UseCase failed: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error interno al buscar actos: " + err.Error()})
 		return
 	}
 

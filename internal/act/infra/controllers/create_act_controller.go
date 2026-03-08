@@ -1,6 +1,7 @@
 package controllers
 
 import (
+	"fmt"
 	"net/http"
 
 	"github.com/JosephAntonyDev/Notaria178_API/internal/act/app"
@@ -28,6 +29,8 @@ func (ctrl *CreateActController) Handle(c *gin.Context) {
 			c.JSON(http.StatusConflict, gin.H{"error": err.Error()})
 			return
 		}
+		
+		fmt.Println("Error interno en CreateAct:", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error interno del servidor"})
 		return
 	}

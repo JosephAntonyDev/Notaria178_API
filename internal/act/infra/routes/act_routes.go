@@ -14,6 +14,10 @@ func SetupActRoutes(
 	updateActCtrl *controllers.UpdateActController,
 	toggleStatusCtrl *controllers.ToggleActStatusController,
 	searchActsCtrl *controllers.SearchActsController,
+	deleteActCtrl *controllers.DeleteActController,
+	addReqCtrl *controllers.AddRequirementController,
+	delReqCtrl *controllers.DeleteRequirementController,
+	getReqsCtrl *controllers.GetRequirementsController,
 	jwtSecret string,
 ) {
 	api := r.Group("/acts")
@@ -21,6 +25,7 @@ func SetupActRoutes(
 	{
 		// Accesible para cualquier empleado logueado
 		api.GET("/search", searchActsCtrl.Handle)
+		api.GET("/:id/requirements", getReqsCtrl.Handle)
 
 		// Restringido a administradores
 		adminOnly := api.Group("")
@@ -29,6 +34,9 @@ func SetupActRoutes(
 			adminOnly.POST("/create", createActCtrl.Handle)
 			adminOnly.PATCH("/update/:id", updateActCtrl.Handle)
 			adminOnly.PATCH("/status/:id", toggleStatusCtrl.Handle)
+			adminOnly.DELETE("/:id", deleteActCtrl.Handle)
+			adminOnly.POST("/:id/requirements", addReqCtrl.Handle)
+			adminOnly.DELETE("/:id/requirements/:req_id", delReqCtrl.Handle)
 		}
 	}
 }

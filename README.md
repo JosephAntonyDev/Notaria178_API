@@ -108,7 +108,7 @@ psql -U your_user -f schema.sql
 
 The schema creates:
 - Enums: `user_role`, `user_status`, `work_status`, `document_category`, `notification_type`
-- 12 tables: `branches`, `users`, `attendances`, `clients`, `act_catalogs`, `works`, `work_acts`, `work_collaborators`, `documents`, `work_comments`, `notifications`, `audit_logs`
+- 13 tables: `branches`, `users`, `attendances`, `clients`, `act_catalogs`, `act_requirements`, `works`, `work_acts`, `work_collaborators`, `documents`, `work_comments`, `notifications`, `audit_logs`
 
 ---
 
@@ -180,7 +180,9 @@ Employee and admin management. Handles registration, login (JWT), profile viewin
 Clock-in/clock-out system for employees. Supports multiple shifts per day.
 
 ### Act (Cached)
-Catalog of notarial act types (e.g., Sale, Power of Attorney). First module with Redis cache — search results are cached for 24 hours with automatic invalidation on create, update, or status toggle.
+Catalog of notarial act types (e.g., Sale, Power of Attorney). Features Redis cache — search results are cached for 24 hours with automatic invalidation on create, update, status toggle, or delete.
+
+Each act contains a **requirements checklist** (sub-resources) that define what documents or steps are needed to process that act type. Requirements support **safe-delete logic**: if the parent act has linked works (`works_count > 0`), requirements are soft-deleted (status set to `INACTIVE`) instead of physically removed, protecting historical data integrity. Acts themselves follow the same pattern — orphan acts (no linked works) can be permanently deleted, while acts with linked works can only be deactivated.
 
 ### Client
 Registry of notary clients with name, RFC, phone, and email.
@@ -231,12 +233,16 @@ Analytics module that powers the control panel. Provides 6 aggregation endpoints
 
 ### Act `/acts`
 
-| Method | Path                       | Description         | Auth          |
-|--------|----------------------------|---------------------|---------------|
-| GET    | `/acts/search`      | Search acts (cached)| Authenticated |
-| POST   | `/acts/create`      | Create act          | Admin         |
-| PATCH  | `/acts/update/:id`  | Update act          | Admin         |
-| PATCH  | `/acts/status/:id`  | Toggle act status   | Admin         |
+| Method | Path                               | Description                    | Auth          |
+|--------|-------------------------------------|--------------------------------|---------------|
+| GET    | `/acts/search`              | Search acts (cached)           | Authenticated |
+| GET    | `/acts/:id/requirements`    | List requirements for an act   | Authenticated |
+| POST   | `/acts/create`              | Create act                     | Admin         |
+| PATCH  | `/acts/update/:id`          | Update act                     | Admin         |
+| PATCH  | `/acts/status/:id`          | Toggle act status              | Admin         |
+| DELETE | `/acts/:id`                 | Delete act (safe-delete)       | Admin         |
+| POST   | `/acts/:id/requirements`    | Add requirement to act         | Admin         |
+| DELETE | `/acts/:id/requirements/:req_id` | Delete/deactivate requirement | Admin         |
 
 ### Client `/clients`
 
@@ -311,7 +317,7 @@ All dashboard endpoints accept these common query parameters:
 | GET | `/dashboard/top-drafters` | Most active drafters by work count | `limit` | Admin |
 | GET | `/dashboard/top-acts` | Most common act types | `limit` | Admin |
 
-**Total: 36 endpoints (1 public, 35 protected)**
+**Total: 41 endpoints (1 public, 40 protected)**
 
 ---
 
@@ -357,6 +363,9 @@ The cache layer follows the Ports & Adapters pattern:
 | Create act     | Invalidate all keys with prefix `acts:search:`.             |
 | Update act     | Invalidate all keys with prefix `acts:search:`.             |
 | Toggle status  | Invalidate all keys with prefix `acts:search:`.             |
+| Delete act     | Invalidate all keys with prefix `acts:search:`.             |
+| Add requirement | Invalidate all keys with prefix `acts:search:`.            |
+| Delete/deactivate requirement | Invalidate all keys with prefix `acts:search:`. |
 
 ### Cache Strategy: Dashboard Module
 

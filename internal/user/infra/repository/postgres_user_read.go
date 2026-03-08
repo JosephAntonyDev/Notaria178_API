@@ -75,7 +75,7 @@ func (repo *PostgresUserRepository) GetByID(ctx context.Context, id uuid.UUID) (
 	return &user, nil
 }
 
-func (repo *PostgresUserRepository) List(ctx context.Context, filters entities.UserFilters) ([]*entities.User, error) {
+func (repo *PostgresUserRepository) List(ctx context.Context, filters entities.UserFilters) ([]*entities.User, int, error) {
 	
 	baseQuery := `
 		SELECT 
@@ -106,18 +106,42 @@ func (repo *PostgresUserRepository) List(ctx context.Context, filters entities.U
 		argId++
 	}
 
-	if filters.BranchID != nil && *filters.BranchID != "" {
+	if filters.BranchID != nil && *filters.BranchID != "" && *filters.BranchID != "all" {
 		baseQuery += ` AND branch_id = $` + strconv.Itoa(argId)
 		args = append(args, *filters.BranchID)
 		argId++
 	}
 
-	baseQuery += ` ORDER BY created_at DESC LIMIT $` + strconv.Itoa(argId) + ` OFFSET $` + strconv.Itoa(argId+1)
+	if filters.StartDate != nil && *filters.StartDate != "" {
+		baseQuery += ` AND hire_date >= $` + strconv.Itoa(argId)
+		args = append(args, *filters.StartDate)
+		argId++
+	}
+
+	if filters.EndDate != nil && *filters.EndDate != "" {
+		baseQuery += ` AND hire_date <= $` + strconv.Itoa(argId)
+		args = append(args, *filters.EndDate)
+		argId++
+	}
+
+	orderDir := "DESC"
+	if filters.Sort != nil && *filters.Sort == "asc" {
+		orderDir = "ASC"
+	}
+
+	countQuery := "SELECT COUNT(*) FROM (" + baseQuery + ") AS sub"
+	var total int
+	err := repo.db.QueryRowContext(ctx, countQuery, args...).Scan(&total)
+	if err != nil {
+		return nil, 0, err
+	}
+
+	baseQuery += ` ORDER BY created_at ` + orderDir + ` LIMIT $` + strconv.Itoa(argId) + ` OFFSET $` + strconv.Itoa(argId+1)
 	args = append(args, filters.Limit, filters.Offset)
 
 	rows, err := repo.db.QueryContext(ctx, baseQuery, args...)
 	if err != nil {
-		return nil, err
+		return nil, 0, err
 	}
 	defer rows.Close()
 
@@ -130,9 +154,9 @@ func (repo *PostgresUserRepository) List(ctx context.Context, filters entities.U
 			&user.HireDate, &user.StartTime, &user.EndTime, &user.CreatedAt, &user.UpdatedAt,
 		)
 		if err != nil {
-			return nil, err
+			return nil, 0, err
 		}
 		users = append(users, &user)
 	}
-	return users, nil
+	return users, total, nil
 }

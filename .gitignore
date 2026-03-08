@@ -26,6 +26,8 @@ coverage.txt
 .env
 .env.*
 !.env.example # Permitir subir un archivo de ejemplo vacío para que sepas qué variables necesitas
+schema.sql
+venv/
 
 # ==========================================
 # 4. ARCHIVOS LOCALES DE LA NOTARÍA
@@ -56,3 +58,10 @@ coverage.txt
 # Archivos basura de Windows y Mac
 .DS_Store
 Thumbs.db
+
+# ==========================================
+# 7. PYTHON / QA
+# ==========================================
+__pycache__/
+*.pyc
+tests/e2e/results/*.pdf

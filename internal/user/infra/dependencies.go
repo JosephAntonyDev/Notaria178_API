@@ -9,17 +9,19 @@ import (
 	"github.com/JosephAntonyDev/Notaria178_API/internal/user/infra/adapters"
 	"github.com/JosephAntonyDev/Notaria178_API/internal/user/infra/controllers"
 	"github.com/JosephAntonyDev/Notaria178_API/internal/user/infra/repository"
+	branchRepo "github.com/JosephAntonyDev/Notaria178_API/internal/branch/infra/repository"
 	"github.com/JosephAntonyDev/Notaria178_API/internal/user/infra/routes"
 )
 
 func SetupDependencies(r *gin.Engine, db *sql.DB, jwtSecret string) {
 	userRepo := repository.NewPostgresUserRepository(db)
+	branchRepository := branchRepo.NewPostgresBranchRepository(db)
 	hasher := adapters.NewBcrypt()
 	tokenManager := adapters.NewJWTManager(jwtSecret)
 
 	createUserUseCase := app.NewCreateUserUseCase(userRepo, hasher)
 	loginUserUseCase := app.NewLoginUserUseCase(userRepo, hasher, tokenManager)
-	getProfileUseCase := app.NewGetProfileUseCase(userRepo)
+	getProfileUseCase := app.NewGetProfileUseCase(userRepo, branchRepository)
 	searchUsersUseCase := app.NewSearchUsersUseCase(userRepo)
 	updateProdileUseCase := app.NewUpdateProfileUseCase(userRepo, hasher)
 	updateEmployeeUseCase := app.NewUpdateEmployeeUseCase(userRepo, hasher)

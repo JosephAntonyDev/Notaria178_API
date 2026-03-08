@@ -6,15 +6,17 @@ import (
 
 	"github.com/JosephAntonyDev/Notaria178_API/internal/act/domain/entities"
 	"github.com/JosephAntonyDev/Notaria178_API/internal/act/domain/repository"
+	"github.com/JosephAntonyDev/Notaria178_API/internal/core/cache"
 	"github.com/google/uuid"
 )
 
 type ToggleActStatusUseCase struct {
-	repo repository.ActRepository
+	repo  repository.ActRepository
+	cache cache.CachePort
 }
 
-func NewToggleActStatusUseCase(r repository.ActRepository) *ToggleActStatusUseCase {
-	return &ToggleActStatusUseCase{repo: r}
+func NewToggleActStatusUseCase(r repository.ActRepository, c cache.CachePort) *ToggleActStatusUseCase {
+	return &ToggleActStatusUseCase{repo: r, cache: c}
 }
 
 func (uc *ToggleActStatusUseCase) Execute(ctx context.Context, actID string) (*ActDTO, error) {
@@ -40,6 +42,11 @@ func (uc *ToggleActStatusUseCase) Execute(ctx context.Context, actID string) (*A
 
 	if err := uc.repo.UpdateStatus(ctx, parsedID, newStatus); err != nil {
 		return nil, err
+	}
+
+	// Invalidar caché de búsquedas tras mutación
+	if uc.cache != nil {
+		_ = uc.cache.InvalidatePrefix(ctx, "acts:search:")
 	}
 
 	act.Status = newStatus

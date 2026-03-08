@@ -1,0 +1,35 @@
+# Version control
+.git
+.gitignore
+
+# Tests
+tests/
+
+# Documentation
+*.md
+
+# Scripts
+run_with_race_detector.*
+
+# Environment
+.env
+
+# IDE
+.vscode/
+.idea/
+
+# Precompiled binaries
+*.exe
+*.dll
+*.so
+*.dylib
+main
+
+# OS artifacts
+.DS_Store
+Thumbs.db
+
+# Docker
+Dockerfile
+docker-compose.yml
+.dockerignore

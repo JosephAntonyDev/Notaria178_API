@@ -45,12 +45,12 @@ func (repo *PostgresUserRepository) Update(ctx context.Context, user *entities.U
 	query := `
 		UPDATE users 
 		SET full_name = $1, email = $2, password_hash = $3, phone = $4, 
-		    role = $5, branch_id = $6, start_time = $7, end_time = $8, updated_at = $9
-		WHERE id = $10
+		    role = $5, branch_id = $6, start_time = $7, end_time = $8, status = $9, updated_at = $10
+		WHERE id = $11
 	`
 	_, err := repo.db.ExecContext(ctx, query,
 		user.FullName, user.Email, user.PasswordHash, user.Phone, 
-		user.Role, user.BranchID, user.StartTime, user.EndTime, time.Now(), user.ID,
+		user.Role, user.BranchID, user.StartTime, user.EndTime, user.Status, time.Now(), user.ID,
 	)
 	return err
 }

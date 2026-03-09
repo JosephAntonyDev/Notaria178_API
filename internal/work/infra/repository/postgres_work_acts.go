@@ -17,6 +17,12 @@ func (repo *PostgresWorkRepository) AddActs(ctx context.Context, workID uuid.UUI
 	return nil
 }
 
+func (repo *PostgresWorkRepository) RemoveAct(ctx context.Context, workID uuid.UUID, actID uuid.UUID) error {
+	query := `DELETE FROM work_acts WHERE work_id = $1 AND act_id = $2`
+	_, err := repo.db.ExecContext(ctx, query, workID, actID)
+	return err
+}
+
 func (repo *PostgresWorkRepository) RemoveAllActs(ctx context.Context, workID uuid.UUID) error {
 	query := `DELETE FROM work_acts WHERE work_id = $1`
 	_, err := repo.db.ExecContext(ctx, query, workID)
@@ -25,7 +31,7 @@ func (repo *PostgresWorkRepository) RemoveAllActs(ctx context.Context, workID uu
 
 func (repo *PostgresWorkRepository) GetActsByWorkID(ctx context.Context, workID uuid.UUID) ([]entities.WorkActInfo, error) {
 	query := `
-		SELECT ac.id, ac.name
+		SELECT ac.id, ac.name, ac.description, ac.category, ac.status
 		FROM work_acts wa
 		JOIN act_catalogs ac ON wa.act_id = ac.id
 		WHERE wa.work_id = $1
@@ -40,7 +46,7 @@ func (repo *PostgresWorkRepository) GetActsByWorkID(ctx context.Context, workID 
 	acts := make([]entities.WorkActInfo, 0)
 	for rows.Next() {
 		var act entities.WorkActInfo
-		if err := rows.Scan(&act.ActID, &act.Name); err != nil {
+		if err := rows.Scan(&act.ActID, &act.Name, &act.Description, &act.Category, &act.Status); err != nil {
 			return nil, err
 		}
 		acts = append(acts, act)

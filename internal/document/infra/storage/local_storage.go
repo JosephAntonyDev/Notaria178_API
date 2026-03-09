@@ -62,3 +62,11 @@ func (s *LocalFileStorage) SaveFile(file *multipart.FileHeader, branchID, workID
 
 	return fullPath, nil
 }
+
+// DeleteFile elimina el archivo físico del disco.
+func (s *LocalFileStorage) DeleteFile(filePath string) error {
+	if err := os.Remove(filePath); err != nil && !os.IsNotExist(err) {
+		return fmt.Errorf("error al eliminar el archivo del disco: %w", err)
+	}
+	return nil
+}

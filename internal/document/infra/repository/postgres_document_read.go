@@ -11,15 +11,17 @@ import (
 
 func (repo *PostgresDocumentRepository) GetByID(ctx context.Context, id uuid.UUID) (*entities.Document, error) {
 	query := `
-		SELECT id, client_id, work_id, user_id, document_name, category, version, file_path, created_at
+		SELECT id, client_id, work_id, user_id, document_name, category, version, file_path, requirement_id, requirement_source, created_at
 		FROM documents
 		WHERE id = $1
 	`
 	row := repo.db.QueryRowContext(ctx, query, id)
 	var doc entities.Document
+	var reqSource sql.NullString
 	err := row.Scan(
 		&doc.ID, &doc.ClientID, &doc.WorkID, &doc.UserID,
-		&doc.DocumentName, &doc.Category, &doc.Version, &doc.FilePath, &doc.CreatedAt,
+		&doc.DocumentName, &doc.Category, &doc.Version, &doc.FilePath,
+		&doc.RequirementID, &reqSource, &doc.CreatedAt,
 	)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
@@ -27,12 +29,15 @@ func (repo *PostgresDocumentRepository) GetByID(ctx context.Context, id uuid.UUI
 		}
 		return nil, err
 	}
+	if reqSource.Valid {
+		doc.RequirementSource = reqSource.String
+	}
 	return &doc, nil
 }
 
 func (repo *PostgresDocumentRepository) GetByWorkID(ctx context.Context, workID uuid.UUID) ([]*entities.Document, error) {
 	query := `
-		SELECT id, client_id, work_id, user_id, document_name, category, version, file_path, created_at
+		SELECT id, client_id, work_id, user_id, document_name, category, version, file_path, requirement_id, requirement_source, created_at
 		FROM documents
 		WHERE work_id = $1
 		ORDER BY created_at DESC
@@ -46,11 +51,16 @@ func (repo *PostgresDocumentRepository) GetByWorkID(ctx context.Context, workID 
 	docs := make([]*entities.Document, 0)
 	for rows.Next() {
 		var doc entities.Document
+		var reqSource sql.NullString
 		if err := rows.Scan(
 			&doc.ID, &doc.ClientID, &doc.WorkID, &doc.UserID,
-			&doc.DocumentName, &doc.Category, &doc.Version, &doc.FilePath, &doc.CreatedAt,
+			&doc.DocumentName, &doc.Category, &doc.Version, &doc.FilePath,
+			&doc.RequirementID, &reqSource, &doc.CreatedAt,
 		); err != nil {
 			return nil, err
+		}
+		if reqSource.Valid {
+			doc.RequirementSource = reqSource.String
 		}
 		docs = append(docs, &doc)
 	}

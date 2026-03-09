@@ -91,6 +91,14 @@ func (uc *CreateWorkUseCase) Execute(ctx context.Context, reqCtx RequestContext,
 
 	acts, _ := uc.repo.GetActsByWorkID(ctx, newWork.ID)
 	collabs, _ := uc.repo.GetCollaborators(ctx, newWork.ID)
+	clientName, _ := uc.repo.GetClientNameByID(ctx, newWork.ClientID)
+	clientInfo, _ := uc.repo.GetClientByID(ctx, newWork.ClientID)
+	branchName, _ := uc.repo.GetBranchNameByID(ctx, newWork.BranchID)
 
-	return buildWorkDetail(newWork, acts, collabs), nil
+	var drafterName string
+	if newWork.MainDrafterID != nil {
+		drafterName, _ = uc.repo.GetUserFullNameByID(ctx, *newWork.MainDrafterID)
+	}
+
+	return buildWorkDetail(newWork, acts, collabs, clientName, branchName, drafterName, clientInfo, []DeduplicatedReqDTO{}, nil), nil
 }

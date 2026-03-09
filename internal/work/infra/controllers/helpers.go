@@ -31,7 +31,7 @@ func handleUseCaseError(c *gin.Context, err error) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": msg})
 	case strings.Contains(msg, "no encontrado"):
 		c.JSON(http.StatusNotFound, gin.H{"error": msg})
-	case strings.Contains(msg, "no tienes") || strings.Contains(msg, "no puedes"):
+	case strings.Contains(msg, "no tienes") || strings.Contains(msg, "no puedes") || strings.Contains(msg, "no se puede"):
 		c.JSON(http.StatusForbidden, gin.H{"error": msg})
 	case strings.Contains(msg, "no permitida"):
 		c.JSON(http.StatusUnprocessableEntity, gin.H{"error": msg})

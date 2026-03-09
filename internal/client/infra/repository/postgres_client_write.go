@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/JosephAntonyDev/Notaria178_API/internal/client/domain/entities"
+	"github.com/google/uuid"
 )
 
 func (repo *PostgresClientRepository) Create(ctx context.Context, client *entities.Client) error {
@@ -26,5 +27,18 @@ func (repo *PostgresClientRepository) Update(ctx context.Context, client *entiti
 	_, err := repo.db.ExecContext(ctx, query,
 		client.FullName, client.RFC, client.Phone, client.Email, client.ID,
 	)
+	return err
+}
+
+func (repo *PostgresClientRepository) CountWorksWithClientInStatus(ctx context.Context, clientID uuid.UUID, status string) (int, error) {
+	var count int
+	query := `SELECT COUNT(*) FROM works WHERE client_id = $1 AND status = $2`
+	err := repo.db.QueryRowContext(ctx, query, clientID, status).Scan(&count)
+	return count, err
+}
+
+func (repo *PostgresClientRepository) UpdatePendingWorksClientID(ctx context.Context, oldClientID uuid.UUID, newClientID uuid.UUID) error {
+	query := `UPDATE works SET client_id = $1 WHERE client_id = $2 AND status != 'APPROVED'`
+	_, err := repo.db.ExecContext(ctx, query, newClientID, oldClientID)
 	return err
 }

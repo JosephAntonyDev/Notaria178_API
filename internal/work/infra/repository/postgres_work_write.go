@@ -2,6 +2,7 @@ package repository
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/JosephAntonyDev/Notaria178_API/internal/work/domain/entities"
@@ -39,5 +40,29 @@ func (repo *PostgresWorkRepository) UpdateStatus(ctx context.Context, id uuid.UU
 		WHERE id = $3
 	`
 	_, err := repo.db.ExecContext(ctx, query, status, time.Now(), id)
+	return err
+}
+
+func (repo *PostgresWorkRepository) UpdateWorkClientID(ctx context.Context, workID uuid.UUID, newClientID uuid.UUID) error {
+	query := `UPDATE works SET client_id = $1, updated_at = $2 WHERE id = $3`
+	_, err := repo.db.ExecContext(ctx, query, newClientID, time.Now(), workID)
+	return err
+}
+
+func (repo *PostgresWorkRepository) DeleteDocumentRecords(ctx context.Context, docIDs []uuid.UUID) error {
+	if len(docIDs) == 0 {
+		return nil
+	}
+	placeholders := ""
+	args := make([]interface{}, len(docIDs))
+	for i, id := range docIDs {
+		if i > 0 {
+			placeholders += ", "
+		}
+		placeholders += "$" + fmt.Sprintf("%d", i+1)
+		args[i] = id
+	}
+	query := `DELETE FROM documents WHERE id IN (` + placeholders + `)`
+	_, err := repo.db.ExecContext(ctx, query, args...)
 	return err
 }

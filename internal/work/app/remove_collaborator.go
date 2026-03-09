@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 
+	"github.com/JosephAntonyDev/Notaria178_API/internal/work/domain/entities"
 	"github.com/JosephAntonyDev/Notaria178_API/internal/work/domain/repository"
 	"github.com/google/uuid"
 )
@@ -32,6 +33,10 @@ func (uc *RemoveCollaboratorUseCase) Execute(ctx context.Context, reqCtx Request
 
 	if !canModifyWork(work, reqCtx) {
 		return errors.New("no tienes permisos para gestionar colaboradores en este trabajo")
+	}
+
+	if work.Status == entities.StatusApproved {
+		return errors.New("no se puede modificar un trabajo aprobado")
 	}
 
 	userID, err := uuid.Parse(targetUserID)

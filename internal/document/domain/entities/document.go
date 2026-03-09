@@ -20,13 +20,15 @@ const (
 // ─── Entidad principal (tabla: documents) ───────────────────────────────────
 
 type Document struct {
-	ID           uuid.UUID        `json:"id"`
-	ClientID     *uuid.UUID       `json:"client_id,omitempty"`
-	WorkID       *uuid.UUID       `json:"work_id,omitempty"`
-	UserID       *uuid.UUID       `json:"user_id,omitempty"`
-	DocumentName string           `json:"document_name"`
-	Category     DocumentCategory `json:"category"`
-	Version      int              `json:"version"`
-	FilePath     string           `json:"file_path"`
-	CreatedAt    time.Time        `json:"created_at"`
+	ID                uuid.UUID        `json:"id"`
+	ClientID          *uuid.UUID       `json:"client_id,omitempty"`
+	WorkID            *uuid.UUID       `json:"work_id,omitempty"`
+	UserID            *uuid.UUID       `json:"user_id,omitempty"`
+	DocumentName      string           `json:"document_name"`
+	Category          DocumentCategory `json:"category"`
+	Version           int              `json:"version"`
+	FilePath          string           `json:"file_path"`
+	RequirementID     *uuid.UUID       `json:"requirement_id,omitempty"`
+	RequirementSource string           `json:"requirement_source,omitempty"`
+	CreatedAt         time.Time        `json:"created_at"`
 }

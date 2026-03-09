@@ -22,13 +22,15 @@ func NewUploadDocumentUseCase(r repository.DocumentRepository, s *storage.LocalF
 }
 
 type UploadDocumentInput struct {
-	File         *multipart.FileHeader
-	BranchID     string
-	WorkID       string
-	ClientID     *string
-	UserID       string
-	DocumentName string
-	Category     string
+	File              *multipart.FileHeader
+	BranchID          string
+	WorkID            string
+	ClientID          *string
+	UserID            string
+	DocumentName      string
+	Category          string
+	RequirementID     string
+	RequirementSource string
 }
 
 func (uc *UploadDocumentUseCase) Execute(ctx context.Context, input UploadDocumentInput) (*DocumentDTO, error) {
@@ -61,6 +63,15 @@ func (uc *UploadDocumentUseCase) Execute(ctx context.Context, input UploadDocume
 		clientID = &parsed
 	}
 
+	var requirementID *uuid.UUID
+	if input.RequirementID != "" {
+		parsed, err := uuid.Parse(input.RequirementID)
+		if err != nil {
+			return nil, errors.New("ID de requisito inválido")
+		}
+		requirementID = &parsed
+	}
+
 	// Guardar archivo físico en disco
 	filePath, err := uc.storage.SaveFile(input.File, input.BranchID, input.WorkID)
 	if err != nil {
@@ -69,19 +80,26 @@ func (uc *UploadDocumentUseCase) Execute(ctx context.Context, input UploadDocume
 
 	// Crear registro en BD
 	doc := &entities.Document{
-		ID:           uuid.New(),
-		ClientID:     clientID,
-		WorkID:       &workID,
-		UserID:       &userID,
-		DocumentName: input.DocumentName,
-		Category:     category,
-		Version:      1,
-		FilePath:     filePath,
-		CreatedAt:    time.Now(),
+		ID:                uuid.New(),
+		ClientID:          clientID,
+		WorkID:            &workID,
+		UserID:            &userID,
+		DocumentName:      input.DocumentName,
+		Category:          category,
+		Version:           1,
+		FilePath:          filePath,
+		RequirementID:     requirementID,
+		RequirementSource: input.RequirementSource,
+		CreatedAt:         time.Now(),
 	}
 
 	if err := uc.repo.Create(ctx, doc); err != nil {
 		return nil, errors.New("error al registrar el documento en la base de datos")
+	}
+
+	// Link document to work_requirement if source is WORK
+	if input.RequirementSource == "WORK" && requirementID != nil {
+		_ = uc.repo.LinkDocumentToWorkRequirement(ctx, doc.ID, *requirementID)
 	}
 
 	dto := ToDocumentDTO(doc)

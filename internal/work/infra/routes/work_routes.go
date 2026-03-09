@@ -19,6 +19,10 @@ func SetupWorkRoutes(
 	removeCollabCtrl *controllers.RemoveCollaboratorController,
 	addCommentCtrl *controllers.AddCommentController,
 	getCommentsCtrl *controllers.GetCommentsController,
+	addWorkActCtrl *controllers.AddWorkActController,
+	removeWorkActCtrl *controllers.RemoveWorkActController,
+	addWorkReqCtrl *controllers.AddWorkRequirementController,
+	deleteWorkReqCtrl *controllers.DeleteWorkRequirementController,
 	jwtSecret string,
 ) {
 	api := r.Group("/works")
@@ -31,6 +35,10 @@ func SetupWorkRoutes(
 		// Comentarios — cualquier autenticado (access check en use case)
 		api.GET("/:id/comments", getCommentsCtrl.Handle)
 		api.POST("/:id/comments", addCommentCtrl.Handle)
+
+		// Requisitos extra del trabajo — cualquier autenticado (access check en use case)
+		api.POST("/:id/requirements", addWorkReqCtrl.Handle)
+		api.DELETE("/:id/requirements/:reqId", deleteWorkReqCtrl.Handle)
 
 		// Creación, modificación, gestión de colaboradores — excluye DATA_ENTRY
 		managers := api.Group("")
@@ -45,6 +53,8 @@ func SetupWorkRoutes(
 			managers.PATCH("/status/:id", updateStatusCtrl.Handle)
 			managers.POST("/:id/collaborators", addCollabCtrl.Handle)
 			managers.DELETE("/:id/collaborators/:userId", removeCollabCtrl.Handle)
+			managers.POST("/:id/acts", addWorkActCtrl.Handle)
+			managers.DELETE("/:id/acts/:actId", removeWorkActCtrl.Handle)
 		}
 	}
 }

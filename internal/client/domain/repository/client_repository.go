@@ -19,4 +19,6 @@ type ClientRepository interface {
 	GetByID(ctx context.Context, id uuid.UUID) (*entities.Client, error)
 	GetByRFC(ctx context.Context, rfc string) (*entities.Client, error)
 	List(ctx context.Context, filters ClientFilters) ([]*entities.Client, error)
+	CountWorksWithClientInStatus(ctx context.Context, clientID uuid.UUID, status string) (int, error)
+	UpdatePendingWorksClientID(ctx context.Context, oldClientID uuid.UUID, newClientID uuid.UUID) error
 }

@@ -11,6 +11,7 @@ import (
 func SetupAuditRoutes(
 	r *gin.Engine,
 	searchCtrl *controllers.SearchAuditLogsController,
+	metricsCtrl *controllers.GetAuditMetricsController,
 	jwtSecret string,
 ) {
 	api := r.Group("/audit")
@@ -18,5 +19,6 @@ func SetupAuditRoutes(
 	api.Use(middleware.RequireRoles(entities.RoleSuperAdmin, entities.RoleLocalAdmin))
 	{
 		api.GET("/search", searchCtrl.Handle)
+		api.GET("/metrics", metricsCtrl.Handle)
 	}
 }

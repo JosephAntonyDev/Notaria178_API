@@ -115,3 +115,90 @@ func (r *PostgresAuditRepository) List(ctx context.Context, filters domainRepo.A
 
 	return logs, rows.Err()
 }
+
+// ─── Metrics ────────────────────────────────────────────────────────────────
+
+func (r *PostgresAuditRepository) GetUserActionMetrics(ctx context.Context, filters domainRepo.AuditFilters) ([]entities.ActionMetricItem, error) {
+	// Group actions for users where Role is DRAFTER or generally user actions
+	baseQuery := `
+		SELECT al.action, COUNT(al.id) as count
+		FROM audit_logs al
+		LEFT JOIN users u ON al.user_id = u.id
+		WHERE 1=1
+	`
+	args := []interface{}{}
+	argID := 1
+
+	if filters.StartDate != nil && *filters.StartDate != "" {
+		baseQuery += ` AND al.created_at >= $` + strconv.Itoa(argID)
+		args = append(args, *filters.StartDate)
+		argID++
+	}
+
+	if filters.EndDate != nil && *filters.EndDate != "" {
+		baseQuery += ` AND al.created_at <= $` + strconv.Itoa(argID)
+		args = append(args, *filters.EndDate)
+		argID++
+	}
+
+	baseQuery += ` GROUP BY al.action ORDER BY count DESC`
+
+	rows, err := r.db.QueryContext(ctx, baseQuery, args...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var metrics []entities.ActionMetricItem
+	for rows.Next() {
+		var item entities.ActionMetricItem
+		if err := rows.Scan(&item.Action, &item.Count); err != nil {
+			return nil, err
+		}
+		metrics = append(metrics, item)
+	}
+
+	return metrics, rows.Err()
+}
+
+func (r *PostgresAuditRepository) GetWorkActionMetrics(ctx context.Context, filters domainRepo.AuditFilters) ([]entities.ActionMetricItem, error) {
+	// Group actions where entity is WORK
+	baseQuery := `
+		SELECT action, COUNT(id) as count
+		FROM audit_logs
+		WHERE entity = 'WORK'
+	`
+	args := []interface{}{}
+	argID := 1
+
+	if filters.StartDate != nil && *filters.StartDate != "" {
+		baseQuery += ` AND created_at >= $` + strconv.Itoa(argID)
+		args = append(args, *filters.StartDate)
+		argID++
+	}
+
+	if filters.EndDate != nil && *filters.EndDate != "" {
+		baseQuery += ` AND created_at <= $` + strconv.Itoa(argID)
+		args = append(args, *filters.EndDate)
+		argID++
+	}
+
+	baseQuery += ` GROUP BY action ORDER BY count DESC`
+
+	rows, err := r.db.QueryContext(ctx, baseQuery, args...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var metrics []entities.ActionMetricItem
+	for rows.Next() {
+		var item entities.ActionMetricItem
+		if err := rows.Scan(&item.Action, &item.Count); err != nil {
+			return nil, err
+		}
+		metrics = append(metrics, item)
+	}
+
+	return metrics, rows.Err()
+}

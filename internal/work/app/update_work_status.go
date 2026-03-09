@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/JosephAntonyDev/Notaria178_API/internal/core/cache"
 	"github.com/JosephAntonyDev/Notaria178_API/internal/work/domain/entities"
 	"github.com/JosephAntonyDev/Notaria178_API/internal/work/domain/events"
 	"github.com/JosephAntonyDev/Notaria178_API/internal/work/domain/repository"
@@ -12,13 +13,14 @@ import (
 )
 
 type UpdateWorkStatusUseCase struct {
-	repo     repository.WorkRepository
-	audit    events.AuditLogger
-	notifier events.Notifier
+	repo      repository.WorkRepository
+	audit     events.AuditLogger
+	notifier  events.Notifier
+	cachePort cache.CachePort
 }
 
-func NewUpdateWorkStatusUseCase(r repository.WorkRepository, audit events.AuditLogger, notifier events.Notifier) *UpdateWorkStatusUseCase {
-	return &UpdateWorkStatusUseCase{repo: r, audit: audit, notifier: notifier}
+func NewUpdateWorkStatusUseCase(r repository.WorkRepository, audit events.AuditLogger, notifier events.Notifier, cp cache.CachePort) *UpdateWorkStatusUseCase {
+	return &UpdateWorkStatusUseCase{repo: r, audit: audit, notifier: notifier, cachePort: cp}
 }
 
 func (uc *UpdateWorkStatusUseCase) Execute(ctx context.Context, reqCtx RequestContext, workID string, req UpdateWorkStatusRequest) (*WorkDTO, error) {
@@ -72,6 +74,14 @@ func (uc *UpdateWorkStatusUseCase) Execute(ctx context.Context, reqCtx RequestCo
 	if uc.notifier != nil && work.MainDrafterID != nil {
 		msg := fmt.Sprintf("El expediente %s cambió de %s a %s", work.ID.String(), oldStatus, string(newStatus))
 		_ = uc.notifier.SendNotification(ctx, *work.MainDrafterID, &work.ID, "STATUS_CHANGE", msg)
+	}
+
+	// Invalidar caché de KPIs de trabajos en Redis
+	if uc.cachePort != nil {
+		go func(cp cache.CachePort) {
+			bCtx := context.Background()
+			_ = cp.InvalidatePrefix(bCtx, "dashboard:kpis")
+		}(uc.cachePort)
 	}
 
 	work.Status = newStatus

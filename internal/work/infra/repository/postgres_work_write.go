@@ -2,7 +2,9 @@ package repository
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/JosephAntonyDev/Notaria178_API/internal/work/domain/entities"
@@ -18,6 +20,9 @@ func (repo *PostgresWorkRepository) Create(ctx context.Context, work *entities.W
 		work.ID, work.BranchID, work.ClientID, work.MainDrafterID,
 		work.Folio, work.Status, work.Deadline, work.CreatedAt, work.UpdatedAt,
 	)
+	if err != nil && strings.Contains(err.Error(), "unique constraint") && strings.Contains(err.Error(), "folio") {
+		return errors.New("folio inválido: ya existe un trabajo con este folio")
+	}
 	return err
 }
 

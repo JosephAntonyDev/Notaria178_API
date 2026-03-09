@@ -3,28 +3,32 @@ package app
 import (
 	"context"
 	"errors"
-	"time"
 
 	"github.com/JosephAntonyDev/Notaria178_API/internal/work/domain/entities"
 	"github.com/JosephAntonyDev/Notaria178_API/internal/work/domain/repository"
 	"github.com/google/uuid"
 )
 
-type UpdateWorkUseCase struct {
+type AddWorkActUseCase struct {
 	repo repository.WorkRepository
 }
 
-func NewUpdateWorkUseCase(r repository.WorkRepository) *UpdateWorkUseCase {
-	return &UpdateWorkUseCase{repo: r}
+func NewAddWorkActUseCase(r repository.WorkRepository) *AddWorkActUseCase {
+	return &AddWorkActUseCase{repo: r}
 }
 
-func (uc *UpdateWorkUseCase) Execute(ctx context.Context, reqCtx RequestContext, workID string, req UpdateWorkRequest) (*WorkDetailDTO, error) {
-	parsedID, err := uuid.Parse(workID)
+func (uc *AddWorkActUseCase) Execute(ctx context.Context, reqCtx RequestContext, workID string, req AddWorkActRequest) (*WorkDetailDTO, error) {
+	parsedWorkID, err := uuid.Parse(workID)
 	if err != nil {
 		return nil, errors.New("ID de trabajo inválido")
 	}
 
-	work, err := uc.repo.GetByID(ctx, parsedID)
+	actID, err := uuid.Parse(req.ActID)
+	if err != nil {
+		return nil, errors.New("ID de acto inválido")
+	}
+
+	work, err := uc.repo.GetByID(ctx, parsedWorkID)
 	if err != nil {
 		return nil, err
 	}
@@ -36,48 +40,15 @@ func (uc *UpdateWorkUseCase) Execute(ctx context.Context, reqCtx RequestContext,
 		return nil, errors.New("no tienes permisos para modificar este trabajo")
 	}
 
-	// Regla Maestra: bloquear mutaciones si el trabajo está APPROVED
 	if work.Status == entities.StatusApproved {
 		return nil, errors.New("no se puede modificar un trabajo aprobado")
 	}
 
-	// Actualizar folio
-	if req.Folio != nil {
-		work.Folio = req.Folio
-	}
-
-	// Actualizar fecha límite
-	if req.Deadline != nil && *req.Deadline != "" {
-		parsed, err := time.Parse("2006-01-02", *req.Deadline)
-		if err != nil {
-			return nil, errors.New("formato de fecha límite inválido, usa YYYY-MM-DD")
-		}
-		work.Deadline = &parsed
-	}
-
-	if err := uc.repo.Update(ctx, work); err != nil {
+	if err := uc.repo.AddActs(ctx, work.ID, []uuid.UUID{actID}); err != nil {
 		return nil, err
 	}
 
-	// Reemplazar actos si se proporcionaron
-	if len(req.ActIDs) > 0 {
-		actIDs := make([]uuid.UUID, 0, len(req.ActIDs))
-		for _, aid := range req.ActIDs {
-			parsed, err := uuid.Parse(aid)
-			if err != nil {
-				return nil, errors.New("uno de los IDs de acto es inválido")
-			}
-			actIDs = append(actIDs, parsed)
-		}
-		if err := uc.repo.RemoveAllActs(ctx, work.ID); err != nil {
-			return nil, err
-		}
-		if err := uc.repo.AddActs(ctx, work.ID, actIDs); err != nil {
-			return nil, err
-		}
-	}
-
-	// Construir respuesta
+	// Build response
 	acts, _ := uc.repo.GetActsByWorkID(ctx, work.ID)
 	collabs, _ := uc.repo.GetCollaborators(ctx, work.ID)
 	clientName, _ := uc.repo.GetClientNameByID(ctx, work.ClientID)
@@ -89,7 +60,6 @@ func (uc *UpdateWorkUseCase) Execute(ctx context.Context, reqCtx RequestContext,
 		drafterName, _ = uc.repo.GetUserFullNameByID(ctx, *work.MainDrafterID)
 	}
 
-	// Deduplicate requirements
 	actIDs := make([]uuid.UUID, 0, len(acts))
 	actMap := make(map[uuid.UUID]string, len(acts))
 	for _, a := range acts {

@@ -31,5 +31,5 @@ func (ctrl *DownloadDocumentController) Handle(c *gin.Context) {
 		return
 	}
 
-	c.File(doc.FilePath)
+	c.FileAttachment(doc.FilePath, doc.DocumentName)
 }

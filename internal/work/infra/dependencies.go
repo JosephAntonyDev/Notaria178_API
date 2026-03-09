@@ -5,6 +5,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 
+	"github.com/JosephAntonyDev/Notaria178_API/internal/document/infra/storage"
 	"github.com/JosephAntonyDev/Notaria178_API/internal/work/app"
 	"github.com/JosephAntonyDev/Notaria178_API/internal/work/domain/events"
 	"github.com/JosephAntonyDev/Notaria178_API/internal/work/infra/controllers"
@@ -14,6 +15,7 @@ import (
 
 func SetupDependencies(r *gin.Engine, db *sql.DB, jwtSecret string, audit events.AuditLogger, notifier events.Notifier) {
 	workRepo := repository.NewPostgresWorkRepository(db)
+	fileStorage := storage.NewLocalFileStorage()
 
 	// Casos de uso
 	createWorkUC := app.NewCreateWorkUseCase(workRepo)
@@ -25,6 +27,10 @@ func SetupDependencies(r *gin.Engine, db *sql.DB, jwtSecret string, audit events
 	removeCollabUC := app.NewRemoveCollaboratorUseCase(workRepo)
 	addCommentUC := app.NewAddCommentUseCase(workRepo)
 	listCommentsUC := app.NewListCommentsUseCase(workRepo)
+	addWorkActUC := app.NewAddWorkActUseCase(workRepo)
+	removeWorkActUC := app.NewRemoveWorkActUseCase(workRepo, fileStorage)
+	addWorkReqUC := app.NewAddWorkRequirementUseCase(workRepo)
+	deleteWorkReqUC := app.NewDeleteWorkRequirementUseCase(workRepo, fileStorage)
 
 	// Controladores
 	createWorkCtrl := controllers.NewCreateWorkController(createWorkUC)
@@ -36,6 +42,10 @@ func SetupDependencies(r *gin.Engine, db *sql.DB, jwtSecret string, audit events
 	removeCollabCtrl := controllers.NewRemoveCollaboratorController(removeCollabUC)
 	addCommentCtrl := controllers.NewAddCommentController(addCommentUC)
 	getCommentsCtrl := controllers.NewGetCommentsController(listCommentsUC)
+	addWorkActCtrl := controllers.NewAddWorkActController(addWorkActUC)
+	removeWorkActCtrl := controllers.NewRemoveWorkActController(removeWorkActUC)
+	addWorkReqCtrl := controllers.NewAddWorkRequirementController(addWorkReqUC)
+	deleteWorkReqCtrl := controllers.NewDeleteWorkRequirementController(deleteWorkReqUC)
 
 	routes.SetupWorkRoutes(
 		r,
@@ -43,6 +53,8 @@ func SetupDependencies(r *gin.Engine, db *sql.DB, jwtSecret string, audit events
 		updateWorkCtrl, updateStatusCtrl,
 		addCollabCtrl, removeCollabCtrl,
 		addCommentCtrl, getCommentsCtrl,
+		addWorkActCtrl, removeWorkActCtrl,
+		addWorkReqCtrl, deleteWorkReqCtrl,
 		jwtSecret,
 	)
 }

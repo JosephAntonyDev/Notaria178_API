@@ -29,6 +29,7 @@ type WorkRepository interface {
 
 	// Actos del expediente
 	AddActs(ctx context.Context, workID uuid.UUID, actIDs []uuid.UUID) error
+	RemoveAct(ctx context.Context, workID uuid.UUID, actID uuid.UUID) error
 	RemoveAllActs(ctx context.Context, workID uuid.UUID) error
 	GetActsByWorkID(ctx context.Context, workID uuid.UUID) ([]entities.WorkActInfo, error)
 
@@ -41,4 +42,31 @@ type WorkRepository interface {
 	// Comentarios
 	AddComment(ctx context.Context, comment *entities.WorkComment) error
 	GetCommentsByWorkID(ctx context.Context, workID uuid.UUID) ([]entities.WorkComment, error)
+
+	// Lookups auxiliares para enriquecer el detalle
+	GetClientNameByID(ctx context.Context, clientID uuid.UUID) (string, error)
+	GetClientByID(ctx context.Context, clientID uuid.UUID) (*entities.ClientInfo, error)
+	GetBranchNameByID(ctx context.Context, branchID uuid.UUID) (string, error)
+	GetUserFullNameByID(ctx context.Context, userID uuid.UUID) (string, error)
+	UpdateWorkClientID(ctx context.Context, workID uuid.UUID, newClientID uuid.UUID) error
+	CountWorksWithClientInStatus(ctx context.Context, clientID uuid.UUID, status string) (int, error)
+	GetRequirementsByActIDs(ctx context.Context, actIDs []uuid.UUID) ([]entities.ActRequirementInfo, error)
+
+	// Requisitos extra del trabajo (ad-hoc)
+	AddWorkRequirement(ctx context.Context, workID uuid.UUID, name string) (*entities.WorkRequirement, error)
+	GetWorkRequirements(ctx context.Context, workID uuid.UUID) ([]entities.WorkRequirement, error)
+	DeleteWorkRequirement(ctx context.Context, reqID uuid.UUID) error
+
+	// Lookup de documentos de requisitos subidos para un trabajo (requirement_id → document_id)
+	GetRequirementDocumentsByWorkID(ctx context.Context, workID uuid.UUID) (map[uuid.UUID]uuid.UUID, error)
+
+	GetWorkRequirementByID(ctx context.Context, reqID uuid.UUID) (*entities.WorkRequirement, error)
+	GetDocumentsForCleanupByReqIDs(ctx context.Context, workID uuid.UUID, reqIDs []uuid.UUID) ([]entities.DocCleanupInfo, error)
+	GetActRequirementIDsByNames(ctx context.Context, names []string) ([]uuid.UUID, error)
+	DeleteDocumentRecords(ctx context.Context, docIDs []uuid.UUID) error
+}
+
+// FileDeleter abstrae el borrado de archivos del disco
+type FileDeleter interface {
+	DeleteFile(filePath string) error
 }

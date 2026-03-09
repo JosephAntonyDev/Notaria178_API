@@ -12,6 +12,7 @@ func SetupDocumentRoutes(
 	uploadCtrl *controllers.UploadDocumentController,
 	listWorkDocsCtrl *controllers.ListWorkDocumentsController,
 	downloadCtrl *controllers.DownloadDocumentController,
+	deleteCtrl *controllers.DeleteDocumentController,
 	jwtSecret string,
 ) {
 	api := r.Group("/documents")
@@ -20,5 +21,6 @@ func SetupDocumentRoutes(
 		api.POST("/upload", uploadCtrl.Handle)
 		api.GET("/work/:work_id", listWorkDocsCtrl.Handle)
 		api.GET("/download/:id", downloadCtrl.Handle)
+		api.DELETE("/:id", deleteCtrl.Handle)
 	}
 }

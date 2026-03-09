@@ -20,11 +20,13 @@ func SetupDependencies(r *gin.Engine, db *sql.DB, jwtSecret string) {
 	uploadDocUC := app.NewUploadDocumentUseCase(docRepo, fileStorage)
 	listWorkDocsUC := app.NewListWorkDocumentsUseCase(docRepo)
 	getDocUC := app.NewGetDocumentUseCase(docRepo)
+	deleteDocUC := app.NewDeleteDocumentUseCase(docRepo, fileStorage)
 
 	// Controladores
 	uploadCtrl := controllers.NewUploadDocumentController(uploadDocUC)
 	listWorkDocsCtrl := controllers.NewListWorkDocumentsController(listWorkDocsUC)
 	downloadCtrl := controllers.NewDownloadDocumentController(getDocUC)
+	deleteCtrl := controllers.NewDeleteDocumentController(deleteDocUC)
 
-	routes.SetupDocumentRoutes(r, uploadCtrl, listWorkDocsCtrl, downloadCtrl, jwtSecret)
+	routes.SetupDocumentRoutes(r, uploadCtrl, listWorkDocsCtrl, downloadCtrl, deleteCtrl, jwtSecret)
 }

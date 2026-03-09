@@ -199,6 +199,33 @@ Supports collaborators, comments, and cross-module integration with audit loggin
 ### Document
 File uploads tied to works and clients. OS-aware storage paths (Linux/Windows). Supports categories: DRAFT_DEED, FINAL_DEED, CLIENT_REQUIREMENT, OTHER. **PDF files are automatically optimized on upload using lossless compression** (pdfcpu), reducing storage usage without any visible quality loss.
 
+#### Document–Requirement Linking (ID-based Architecture)
+
+Documents of category `CLIENT_REQUIREMENT` are linked to their corresponding requirement via `requirement_id` and `requirement_source`, stored directly in the `documents` table. This replaces the previous name-based matching approach and eliminates issues with filename collisions, renames, and structured naming conventions.
+
+| Column              | Type          | Description                                                    |
+|---------------------|---------------|----------------------------------------------------------------|
+| `requirement_id`    | UUID (nullable) | Points to `act_requirements.id` or `work_requirements.id`   |
+| `requirement_source`| VARCHAR(20)   | `'ACT'` for act catalog requirements, `'WORK'` for ad-hoc     |
+
+**Upload flow:**
+1. Frontend sends `requirement_id` and `requirement_source` alongside the file in `POST /documents/upload`.
+2. Backend stores both fields in the `documents` row.
+3. If `requirement_source = 'WORK'`, the backend also sets `work_requirements.document_id` to the new document ID for direct lookup.
+4. Filenames include a Unix timestamp for uniqueness: `ClientName_ReqName_<timestamp>_original.pdf`.
+
+**Read flow (GetWorkDetail):**
+1. Backend queries `SELECT DISTINCT ON (requirement_id) requirement_id, id FROM documents WHERE work_id = ? AND requirement_id IS NOT NULL ORDER BY requirement_id, created_at DESC` to get the latest document per requirement.
+2. For deduplicated (act) requirements: checks if **any** contributing `act_requirements.id` matches a key in the document map.
+3. For work requirements: checks by `work_requirements.id` directly.
+
+**Cascade delete:**
+- Removing an ad-hoc work requirement: deletes documents where `requirement_id = work_requirement_id`.
+- Removing an act: computes orphaned requirement names (not shared by remaining acts), resolves all matching `act_requirements.id` values, then deletes documents where `requirement_id IN (orphaned_ids)`.
+
+**Download:**
+Uses `c.FileAttachment(filePath, documentName)` to set `Content-Disposition` with the human-readable document name, regardless of the internal file path.
+
 ### Notification
 User notifications with real-time delivery via Server-Sent Events (SSE). Types: NEW_COMMENT, ASSIGNMENT, STATUS_CHANGE, SYSTEM.
 

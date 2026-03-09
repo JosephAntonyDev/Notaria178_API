@@ -11,4 +11,6 @@ type DocumentRepository interface {
 	Create(ctx context.Context, doc *entities.Document) error
 	GetByID(ctx context.Context, id uuid.UUID) (*entities.Document, error)
 	GetByWorkID(ctx context.Context, workID uuid.UUID) ([]*entities.Document, error)
+	Delete(ctx context.Context, id uuid.UUID) error
+	LinkDocumentToWorkRequirement(ctx context.Context, docID uuid.UUID, reqID uuid.UUID) error
 }

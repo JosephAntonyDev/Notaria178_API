@@ -13,6 +13,7 @@ import (
 type AuditLogDTO struct {
 	ID          uuid.UUID       `json:"id"`
 	UserID      *uuid.UUID      `json:"user_id,omitempty"`
+	UserName    *string         `json:"user_name,omitempty"`
 	Action      string          `json:"action"`
 	Entity      string          `json:"entity"`
 	EntityID    uuid.UUID       `json:"entity_id"`
@@ -26,6 +27,7 @@ func ToAuditLogDTO(l *entities.AuditLog) AuditLogDTO {
 	return AuditLogDTO{
 		ID:          l.ID,
 		UserID:      l.UserID,
+		UserName:    l.UserName,
 		Action:      l.Action,
 		Entity:      l.Entity,
 		EntityID:    l.EntityID,

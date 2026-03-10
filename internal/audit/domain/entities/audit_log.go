@@ -12,6 +12,7 @@ import (
 type AuditLog struct {
 	ID          uuid.UUID       `json:"id"`
 	UserID      *uuid.UUID      `json:"user_id,omitempty"`
+	UserName    *string         `json:"user_name,omitempty"`
 	Action      string          `json:"action"`
 	Entity      string          `json:"entity"`
 	EntityID    uuid.UUID       `json:"entity_id"`

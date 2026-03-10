@@ -5,6 +5,7 @@ import (
 	"errors"
 
 	"github.com/JosephAntonyDev/Notaria178_API/internal/work/domain/entities"
+	"github.com/JosephAntonyDev/Notaria178_API/internal/work/domain/events"
 	"github.com/JosephAntonyDev/Notaria178_API/internal/work/domain/repository"
 	"github.com/google/uuid"
 )
@@ -12,10 +13,11 @@ import (
 type RemoveWorkActUseCase struct {
 	repo    repository.WorkRepository
 	fileDel repository.FileDeleter
+	audit   events.AuditLogger
 }
 
-func NewRemoveWorkActUseCase(r repository.WorkRepository, fd repository.FileDeleter) *RemoveWorkActUseCase {
-	return &RemoveWorkActUseCase{repo: r, fileDel: fd}
+func NewRemoveWorkActUseCase(r repository.WorkRepository, fd repository.FileDeleter, audit events.AuditLogger) *RemoveWorkActUseCase {
+	return &RemoveWorkActUseCase{repo: r, fileDel: fd, audit: audit}
 }
 
 func (uc *RemoveWorkActUseCase) Execute(ctx context.Context, reqCtx RequestContext, workID string, actID string) error {
@@ -96,9 +98,27 @@ func (uc *RemoveWorkActUseCase) Execute(ctx context.Context, reqCtx RequestConte
 		}
 	}
 
+	// Get act name before removing
+	actName, _ := uc.repo.GetActNameByID(ctx, parsedActID)
+
 	// Remove the act from the work
 	if err := uc.repo.RemoveAct(ctx, work.ID, parsedActID); err != nil {
 		return err
+	}
+
+	if uc.audit != nil {
+		var reqUUID *uuid.UUID
+		if parsed, err := uuid.Parse(reqCtx.UserID); err == nil {
+			reqUUID = &parsed
+		}
+
+		details := map[string]interface{}{}
+		if work.Folio != nil {
+			details["folio"] = *work.Folio
+		}
+		details["act_name"] = actName
+
+		_ = uc.audit.LogAction(ctx, "REMOVE_ACT", "WORK", work.ID, reqUUID, details)
 	}
 
 	return nil

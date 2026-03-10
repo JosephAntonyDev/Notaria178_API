@@ -23,13 +23,15 @@ type LoginUserUseCase struct {
 	repo         repository.UserRepository
 	hasher       ports.PasswordHasher
 	tokenManager ports.TokenManager
+	audit        ports.AuditLogger
 }
 
-func NewLoginUserUseCase(r repository.UserRepository, h ports.PasswordHasher, t ports.TokenManager) *LoginUserUseCase {
+func NewLoginUserUseCase(r repository.UserRepository, h ports.PasswordHasher, t ports.TokenManager, audit ports.AuditLogger) *LoginUserUseCase {
 	return &LoginUserUseCase{
 		repo:         r,
 		hasher:       h,
 		tokenManager: t,
+		audit:        audit,
 	}
 }
 
@@ -51,6 +53,10 @@ func (uc *LoginUserUseCase) Execute(ctx context.Context, req LoginUserRequest) (
 	token, err := uc.tokenManager.GenerateToken(user.ID, user.Role, user.BranchID)
 	if err != nil {
 		return nil, errors.New("error interno al generar el token de acceso")
+	}
+
+	if uc.audit != nil {
+		_ = uc.audit.LogAction(ctx, "LOGIN", "USER", user.ID, &user.ID, nil)
 	}
 
 	return &LoginResponse{

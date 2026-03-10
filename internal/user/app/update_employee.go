@@ -25,13 +25,14 @@ type UpdateEmployeeRequest struct {
 type UpdateEmployeeUseCase struct {
 	repo   repository.UserRepository
 	hasher ports.PasswordHasher
+	audit  ports.AuditLogger
 }
 
-func NewUpdateEmployeeUseCase(r repository.UserRepository, h ports.PasswordHasher) *UpdateEmployeeUseCase {
-	return &UpdateEmployeeUseCase{repo: r, hasher: h}
+func NewUpdateEmployeeUseCase(r repository.UserRepository, h ports.PasswordHasher, audit ports.AuditLogger) *UpdateEmployeeUseCase {
+	return &UpdateEmployeeUseCase{repo: r, hasher: h, audit: audit}
 }
 
-func (uc *UpdateEmployeeUseCase) Execute(ctx context.Context, targetUserID string, requesterRole string, req UpdateEmployeeRequest) error {
+func (uc *UpdateEmployeeUseCase) Execute(ctx context.Context, targetUserID string, requesterID string, requesterRole string, req UpdateEmployeeRequest) error {
 	parsedID, err := uuid.Parse(targetUserID)
 	if err != nil {
 		return errors.New("ID de empleado destino inválido")
@@ -104,5 +105,29 @@ func (uc *UpdateEmployeeUseCase) Execute(ctx context.Context, targetUserID strin
 		targetUser.PasswordHash = hashed
 	}
 
-	return uc.repo.Update(ctx, targetUser)
+	if err := uc.repo.Update(ctx, targetUser); err != nil {
+		return err
+	}
+
+	if uc.audit != nil {
+		var reqUUID *uuid.UUID
+		if parsed, err := uuid.Parse(requesterID); err == nil {
+			reqUUID = &parsed
+		}
+		
+		details := map[string]interface{}{}
+		if req.Role != nil {
+			details["new_role"] = *req.Role
+		}
+		if req.Status != nil {
+			details["new_status"] = *req.Status
+		}
+		if req.FullName != nil {
+			details["name"] = *req.FullName
+		}
+		
+		_ = uc.audit.LogAction(ctx, "UPDATE", "USER", targetUser.ID, reqUUID, details)
+	}
+
+	return nil
 }

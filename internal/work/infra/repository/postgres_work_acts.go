@@ -53,3 +53,9 @@ func (repo *PostgresWorkRepository) GetActsByWorkID(ctx context.Context, workID 
 	}
 	return acts, nil
 }
+
+func (repo *PostgresWorkRepository) GetActNameByID(ctx context.Context, actID uuid.UUID) (string, error) {
+	var name string
+	err := repo.db.QueryRowContext(ctx, `SELECT name FROM act_catalogs WHERE id = $1`, actID).Scan(&name)
+	return name, err
+}

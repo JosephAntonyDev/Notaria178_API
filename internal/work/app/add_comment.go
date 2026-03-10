@@ -6,16 +6,18 @@ import (
 	"time"
 
 	"github.com/JosephAntonyDev/Notaria178_API/internal/work/domain/entities"
+	"github.com/JosephAntonyDev/Notaria178_API/internal/work/domain/events"
 	"github.com/JosephAntonyDev/Notaria178_API/internal/work/domain/repository"
 	"github.com/google/uuid"
 )
 
 type AddCommentUseCase struct {
-	repo repository.WorkRepository
+	repo  repository.WorkRepository
+	audit events.AuditLogger
 }
 
-func NewAddCommentUseCase(r repository.WorkRepository) *AddCommentUseCase {
-	return &AddCommentUseCase{repo: r}
+func NewAddCommentUseCase(r repository.WorkRepository, audit events.AuditLogger) *AddCommentUseCase {
+	return &AddCommentUseCase{repo: r, audit: audit}
 }
 
 func (uc *AddCommentUseCase) Execute(ctx context.Context, reqCtx RequestContext, workID string, req AddCommentRequest) (*WorkCommentDTO, error) {
@@ -52,6 +54,17 @@ func (uc *AddCommentUseCase) Execute(ctx context.Context, reqCtx RequestContext,
 
 	if err := uc.repo.AddComment(ctx, comment); err != nil {
 		return nil, err
+	}
+
+	if uc.audit != nil {
+		details := map[string]interface{}{
+			"message": req.Message,
+		}
+		if work.Folio != nil {
+			details["folio"] = *work.Folio
+		}
+		
+		_ = uc.audit.LogAction(ctx, "COMMENT", "WORK", parsedWorkID, &userUUID, details)
 	}
 
 	dto := ToWorkCommentDTO(*comment)

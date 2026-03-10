@@ -25,13 +25,19 @@ func (ctrl *CreateUserController) Handle(c *gin.Context) {
 	}
 	requesterRole := requesterRoleVal.(string)
 
+	requesterIDVal, idExists := c.Get("userID")
+	var requesterID string
+	if idExists {
+		requesterID = requesterIDVal.(string)
+	}
+
 	var req app.CreateUserRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Datos inválidos: verifica los campos requeridos"})
 		return
 	}
 
-	user, err := ctrl.useCase.Execute(c.Request.Context(), requesterRole, req)
+	user, err := ctrl.useCase.Execute(c.Request.Context(), requesterID, requesterRole, req)
 	if err != nil {
 		if err.Error()[:18] == "operación denegada" {
 			c.JSON(http.StatusForbidden, gin.H{"error": err.Error()})

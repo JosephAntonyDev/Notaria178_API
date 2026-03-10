@@ -5,6 +5,7 @@ import (
 	"errors"
 
 	"github.com/JosephAntonyDev/Notaria178_API/internal/work/domain/entities"
+	"github.com/JosephAntonyDev/Notaria178_API/internal/work/domain/events"
 	"github.com/JosephAntonyDev/Notaria178_API/internal/work/domain/repository"
 	"github.com/google/uuid"
 )
@@ -12,10 +13,11 @@ import (
 type DeleteWorkRequirementUseCase struct {
 	repo    repository.WorkRepository
 	fileDel repository.FileDeleter
+	audit   events.AuditLogger
 }
 
-func NewDeleteWorkRequirementUseCase(r repository.WorkRepository, fd repository.FileDeleter) *DeleteWorkRequirementUseCase {
-	return &DeleteWorkRequirementUseCase{repo: r, fileDel: fd}
+func NewDeleteWorkRequirementUseCase(r repository.WorkRepository, fd repository.FileDeleter, audit events.AuditLogger) *DeleteWorkRequirementUseCase {
+	return &DeleteWorkRequirementUseCase{repo: r, fileDel: fd, audit: audit}
 }
 
 func (uc *DeleteWorkRequirementUseCase) Execute(ctx context.Context, reqCtx RequestContext, workID string, reqID string) error {
@@ -61,8 +63,28 @@ func (uc *DeleteWorkRequirementUseCase) Execute(ctx context.Context, reqCtx Requ
 		_ = uc.repo.DeleteDocumentRecords(ctx, docIDs)
 	}
 
+	// Get work requirement name before deleting
+	wrInfo, _ := uc.repo.GetWorkRequirementByID(ctx, parsedReqID)
+
 	if err := uc.repo.DeleteWorkRequirement(ctx, parsedReqID); err != nil {
 		return errors.New("error al eliminar el requisito")
+	}
+
+	if uc.audit != nil {
+		var reqUUID *uuid.UUID
+		if parsed, err := uuid.Parse(reqCtx.UserID); err == nil {
+			reqUUID = &parsed
+		}
+
+		details := map[string]interface{}{}
+		if work.Folio != nil {
+			details["folio"] = *work.Folio
+		}
+		if wrInfo != nil {
+			details["requirement_name"] = wrInfo.Name
+		}
+
+		_ = uc.audit.LogAction(ctx, "DELETE_REQUIREMENT", "WORK", work.ID, reqUUID, details)
 	}
 
 	return nil

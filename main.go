@@ -63,7 +63,6 @@ func main() {
 
 	r.Use(core.SetupCORS())
 
-	userInfra.SetupDependencies(r, db, jwtSecret)
 	attendanceInfra.SetupDependencies(r, db, jwtSecret)
 	actInfra.SetupDependencies(r, db, jwtSecret, cachePort)
 	clientInfra.SetupDependencies(r, db, jwtSecret)
@@ -79,7 +78,8 @@ func main() {
 	auditAdapter := adapters.NewAuditLoggerAdapter(logActionUC)
 	notifAdapter := adapters.NewNotifierAdapter(createNotifUC)
 
-	workInfra.SetupDependencies(r, db, jwtSecret, auditAdapter, notifAdapter)
+	workInfra.SetupDependencies(r, db, jwtSecret, auditAdapter, notifAdapter, cachePort)
+	userInfra.SetupDependencies(r, db, jwtSecret, auditAdapter)
 
 	port := os.Getenv("PORT")
 	if port == "" {

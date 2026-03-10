@@ -25,13 +25,19 @@ func (ctrl *UpdateEmployeeController) Handle(c *gin.Context) {
 	}
 	requesterRole := requesterRoleVal.(string)
 
+	requesterIDVal, idExists := c.Get("userID")
+	var requesterID string
+	if idExists {
+		requesterID = requesterIDVal.(string)
+	}
+
 	var req app.UpdateEmployeeRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Datos inválidos o formato incorrecto"})
 		return
 	}
 
-	err := ctrl.useCase.Execute(c.Request.Context(), targetID, requesterRole, req)
+	err := ctrl.useCase.Execute(c.Request.Context(), targetID, requesterID, requesterRole, req)
 	if err != nil {
 		if err.Error()[:18] == "operación denegada" {
 			c.JSON(http.StatusForbidden, gin.H{"error": err.Error()})

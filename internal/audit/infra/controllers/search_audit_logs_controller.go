@@ -58,7 +58,7 @@ func (ctrl *SearchAuditLogsController) Handle(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, dtos.PaginatedResponse{
-		Total: len(logs),
-		Data:  logs,
+		Total: logs.Total,
+		Data:  logs.Logs,
 	})
 }

@@ -5,6 +5,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 
+	"github.com/JosephAntonyDev/Notaria178_API/internal/core/cache"
 	"github.com/JosephAntonyDev/Notaria178_API/internal/document/infra/storage"
 	"github.com/JosephAntonyDev/Notaria178_API/internal/work/app"
 	"github.com/JosephAntonyDev/Notaria178_API/internal/work/domain/events"
@@ -13,24 +14,24 @@ import (
 	"github.com/JosephAntonyDev/Notaria178_API/internal/work/infra/routes"
 )
 
-func SetupDependencies(r *gin.Engine, db *sql.DB, jwtSecret string, audit events.AuditLogger, notifier events.Notifier) {
+func SetupDependencies(r *gin.Engine, db *sql.DB, jwtSecret string, audit events.AuditLogger, notifier events.Notifier, cachePort cache.CachePort) {
 	workRepo := repository.NewPostgresWorkRepository(db)
 	fileStorage := storage.NewLocalFileStorage()
 
 	// Casos de uso
-	createWorkUC := app.NewCreateWorkUseCase(workRepo)
+	createWorkUC := app.NewCreateWorkUseCase(workRepo, cachePort, audit)
 	getWorkDetailUC := app.NewGetWorkDetailUseCase(workRepo)
 	searchWorksUC := app.NewSearchWorksUseCase(workRepo)
-	updateWorkUC := app.NewUpdateWorkUseCase(workRepo)
-	updateStatusUC := app.NewUpdateWorkStatusUseCase(workRepo, audit, notifier)
-	addCollabUC := app.NewAddCollaboratorUseCase(workRepo)
-	removeCollabUC := app.NewRemoveCollaboratorUseCase(workRepo)
-	addCommentUC := app.NewAddCommentUseCase(workRepo)
+	updateWorkUC := app.NewUpdateWorkUseCase(workRepo, audit)
+	updateStatusUC := app.NewUpdateWorkStatusUseCase(workRepo, audit, notifier, cachePort)
+	addCollabUC := app.NewAddCollaboratorUseCase(workRepo, audit)
+	removeCollabUC := app.NewRemoveCollaboratorUseCase(workRepo, audit)
+	addCommentUC := app.NewAddCommentUseCase(workRepo, audit)
 	listCommentsUC := app.NewListCommentsUseCase(workRepo)
-	addWorkActUC := app.NewAddWorkActUseCase(workRepo)
-	removeWorkActUC := app.NewRemoveWorkActUseCase(workRepo, fileStorage)
-	addWorkReqUC := app.NewAddWorkRequirementUseCase(workRepo)
-	deleteWorkReqUC := app.NewDeleteWorkRequirementUseCase(workRepo, fileStorage)
+	addWorkActUC := app.NewAddWorkActUseCase(workRepo, audit)
+	removeWorkActUC := app.NewRemoveWorkActUseCase(workRepo, fileStorage, audit)
+	addWorkReqUC := app.NewAddWorkRequirementUseCase(workRepo, audit)
+	deleteWorkReqUC := app.NewDeleteWorkRequirementUseCase(workRepo, fileStorage, audit)
 
 	// Controladores
 	createWorkCtrl := controllers.NewCreateWorkController(createWorkUC)

@@ -18,3 +18,10 @@ type AuditLog struct {
 	JSONDetails json.RawMessage `json:"json_details,omitempty"`
 	CreatedAt   time.Time       `json:"created_at"`
 }
+
+// ─── Métricas Agrupadas ─────────────────────────────────────────────────────
+
+type ActionMetricItem struct {
+	Action string `json:"action"`
+	Count  int    `json:"count"`
+}

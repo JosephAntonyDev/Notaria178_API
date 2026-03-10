@@ -79,7 +79,7 @@ func main() {
 	auditAdapter := adapters.NewAuditLoggerAdapter(logActionUC)
 	notifAdapter := adapters.NewNotifierAdapter(createNotifUC)
 
-	workInfra.SetupDependencies(r, db, jwtSecret, auditAdapter, notifAdapter)
+	workInfra.SetupDependencies(r, db, jwtSecret, auditAdapter, notifAdapter, cachePort)
 
 	port := os.Getenv("PORT")
 	if port == "" {

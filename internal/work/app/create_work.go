@@ -5,17 +5,19 @@ import (
 	"errors"
 	"time"
 
+	"github.com/JosephAntonyDev/Notaria178_API/internal/core/cache"
 	"github.com/JosephAntonyDev/Notaria178_API/internal/work/domain/entities"
 	"github.com/JosephAntonyDev/Notaria178_API/internal/work/domain/repository"
 	"github.com/google/uuid"
 )
 
 type CreateWorkUseCase struct {
-	repo repository.WorkRepository
+	repo      repository.WorkRepository
+	cachePort cache.CachePort
 }
 
-func NewCreateWorkUseCase(r repository.WorkRepository) *CreateWorkUseCase {
-	return &CreateWorkUseCase{repo: r}
+func NewCreateWorkUseCase(r repository.WorkRepository, cp cache.CachePort) *CreateWorkUseCase {
+	return &CreateWorkUseCase{repo: r, cachePort: cp}
 }
 
 func (uc *CreateWorkUseCase) Execute(ctx context.Context, reqCtx RequestContext, req CreateWorkRequest) (*WorkDetailDTO, error) {
@@ -98,6 +100,14 @@ func (uc *CreateWorkUseCase) Execute(ctx context.Context, reqCtx RequestContext,
 	var drafterName string
 	if newWork.MainDrafterID != nil {
 		drafterName, _ = uc.repo.GetUserFullNameByID(ctx, *newWork.MainDrafterID)
+	}
+
+	// Invalidar caché de KPIs de trabajos en Redis
+	if uc.cachePort != nil {
+		go func(cp cache.CachePort) {
+			bCtx := context.Background()
+			_ = cp.InvalidatePrefix(bCtx, "dashboard:kpis")
+		}(uc.cachePort)
 	}
 
 	return buildWorkDetail(newWork, acts, collabs, clientName, branchName, drafterName, clientInfo, []DeduplicatedReqDTO{}, nil), nil

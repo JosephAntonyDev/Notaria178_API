@@ -20,11 +20,13 @@ func SetupDependencies(r *gin.Engine, db *sql.DB, jwtSecret string) *app.LogActi
 	// Casos de uso
 	logActionUC := app.NewLogActionUseCase(auditRepo)
 	searchAuditLogsUC := app.NewSearchAuditLogsUseCase(auditRepo)
+	getAuditMetricsUC := app.NewGetAuditMetricsUseCase(auditRepo)
 
 	// Controladores
 	searchCtrl := controllers.NewSearchAuditLogsController(searchAuditLogsUC)
+	metricsCtrl := controllers.NewGetAuditMetricsController(getAuditMetricsUC)
 
-	routes.SetupAuditRoutes(r, searchCtrl, jwtSecret)
+	routes.SetupAuditRoutes(r, searchCtrl, metricsCtrl, jwtSecret)
 
 	return logActionUC
 }

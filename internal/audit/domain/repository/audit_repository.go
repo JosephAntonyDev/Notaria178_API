@@ -24,4 +24,6 @@ type AuditFilters struct {
 type AuditRepository interface {
 	Create(ctx context.Context, log *entities.AuditLog) error
 	List(ctx context.Context, filters AuditFilters) ([]*entities.AuditLog, error)
+	GetUserActionMetrics(ctx context.Context, filters AuditFilters) ([]entities.ActionMetricItem, error)
+	GetWorkActionMetrics(ctx context.Context, filters AuditFilters) ([]entities.ActionMetricItem, error)
 }

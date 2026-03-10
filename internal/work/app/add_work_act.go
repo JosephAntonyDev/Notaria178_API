@@ -5,16 +5,18 @@ import (
 	"errors"
 
 	"github.com/JosephAntonyDev/Notaria178_API/internal/work/domain/entities"
+	"github.com/JosephAntonyDev/Notaria178_API/internal/work/domain/events"
 	"github.com/JosephAntonyDev/Notaria178_API/internal/work/domain/repository"
 	"github.com/google/uuid"
 )
 
 type AddWorkActUseCase struct {
-	repo repository.WorkRepository
+	repo  repository.WorkRepository
+	audit events.AuditLogger
 }
 
-func NewAddWorkActUseCase(r repository.WorkRepository) *AddWorkActUseCase {
-	return &AddWorkActUseCase{repo: r}
+func NewAddWorkActUseCase(r repository.WorkRepository, audit events.AuditLogger) *AddWorkActUseCase {
+	return &AddWorkActUseCase{repo: r, audit: audit}
 }
 
 func (uc *AddWorkActUseCase) Execute(ctx context.Context, reqCtx RequestContext, workID string, req AddWorkActRequest) (*WorkDetailDTO, error) {
@@ -75,6 +77,23 @@ func (uc *AddWorkActUseCase) Execute(ctx context.Context, reqCtx RequestContext,
 		dedupReqs = []DeduplicatedReqDTO{}
 	}
 	workReqs, _ := uc.repo.GetWorkRequirements(ctx, work.ID)
+
+	if uc.audit != nil {
+		var reqUUID *uuid.UUID
+		if parsed, err := uuid.Parse(reqCtx.UserID); err == nil {
+			reqUUID = &parsed
+		}
+
+		actName, _ := uc.repo.GetActNameByID(ctx, actID)
+
+		details := map[string]interface{}{}
+		if work.Folio != nil {
+			details["folio"] = *work.Folio
+		}
+		details["act_name"] = actName
+
+		_ = uc.audit.LogAction(ctx, "ADD_ACT", "WORK", work.ID, reqUUID, details)
+	}
 
 	return buildWorkDetail(work, acts, collabs, clientName, branchName, drafterName, clientInfo, dedupReqs, workReqs), nil
 }

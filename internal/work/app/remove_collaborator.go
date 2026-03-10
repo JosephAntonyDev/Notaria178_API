@@ -5,16 +5,18 @@ import (
 	"errors"
 
 	"github.com/JosephAntonyDev/Notaria178_API/internal/work/domain/entities"
+	"github.com/JosephAntonyDev/Notaria178_API/internal/work/domain/events"
 	"github.com/JosephAntonyDev/Notaria178_API/internal/work/domain/repository"
 	"github.com/google/uuid"
 )
 
 type RemoveCollaboratorUseCase struct {
-	repo repository.WorkRepository
+	repo  repository.WorkRepository
+	audit events.AuditLogger
 }
 
-func NewRemoveCollaboratorUseCase(r repository.WorkRepository) *RemoveCollaboratorUseCase {
-	return &RemoveCollaboratorUseCase{repo: r}
+func NewRemoveCollaboratorUseCase(r repository.WorkRepository, audit events.AuditLogger) *RemoveCollaboratorUseCase {
+	return &RemoveCollaboratorUseCase{repo: r, audit: audit}
 }
 
 func (uc *RemoveCollaboratorUseCase) Execute(ctx context.Context, reqCtx RequestContext, workID string, targetUserID string) error {
@@ -44,5 +46,26 @@ func (uc *RemoveCollaboratorUseCase) Execute(ctx context.Context, reqCtx Request
 		return errors.New("ID de colaborador inválido")
 	}
 
-	return uc.repo.RemoveCollaborator(ctx, parsedWorkID, userID)
+	if err := uc.repo.RemoveCollaborator(ctx, parsedWorkID, userID); err != nil {
+		return err
+	}
+
+	if uc.audit != nil {
+		var reqUUID *uuid.UUID
+		if parsed, err := uuid.Parse(reqCtx.UserID); err == nil {
+			reqUUID = &parsed
+		}
+
+		collabName, _ := uc.repo.GetUserFullNameByID(ctx, userID)
+
+		details := map[string]interface{}{}
+		if work.Folio != nil {
+			details["folio"] = *work.Folio
+		}
+		details["removed_user"] = collabName
+
+		_ = uc.audit.LogAction(ctx, "UNASSIGN", "WORK", parsedWorkID, reqUUID, details)
+	}
+
+	return nil
 }

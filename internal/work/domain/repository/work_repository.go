@@ -32,6 +32,7 @@ type WorkRepository interface {
 	RemoveAct(ctx context.Context, workID uuid.UUID, actID uuid.UUID) error
 	RemoveAllActs(ctx context.Context, workID uuid.UUID) error
 	GetActsByWorkID(ctx context.Context, workID uuid.UUID) ([]entities.WorkActInfo, error)
+	GetActNameByID(ctx context.Context, actID uuid.UUID) (string, error)
 
 	// Colaboradores
 	AddCollaborator(ctx context.Context, workID uuid.UUID, userID uuid.UUID) error

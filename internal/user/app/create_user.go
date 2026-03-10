@@ -26,16 +26,18 @@ type CreateUserRequest struct {
 type CreateUserUseCase struct {
 	repo   repository.UserRepository
 	hasher ports.PasswordHasher
+	audit  ports.AuditLogger
 }
 
-func NewCreateUserUseCase(r repository.UserRepository, h ports.PasswordHasher) *CreateUserUseCase {
+func NewCreateUserUseCase(r repository.UserRepository, h ports.PasswordHasher, audit ports.AuditLogger) *CreateUserUseCase {
 	return &CreateUserUseCase{
 		repo:   r,
 		hasher: h,
+		audit:  audit,
 	}
 }
 
-func (uc *CreateUserUseCase) Execute(ctx context.Context, requesterRole string, req CreateUserRequest) (*entities.User, error) {
+func (uc *CreateUserUseCase) Execute(ctx context.Context, requesterID string, requesterRole string, req CreateUserRequest) (*entities.User, error) {
 	
 	if requesterRole == string(entities.RoleLocalAdmin) && req.Role == string(entities.RoleSuperAdmin) {
 		return nil, errors.New("operación denegada: un administrador no puede crear una cuenta de notario titular")
@@ -80,6 +82,20 @@ func (uc *CreateUserUseCase) Execute(ctx context.Context, requesterRole string, 
 	}
 
 	go uc.sendWelcomeEmailAsync(newUser.Email, newUser.FullName)
+
+	if uc.audit != nil {
+		var reqUUID *uuid.UUID
+		if parsed, err := uuid.Parse(requesterID); err == nil {
+			reqUUID = &parsed
+		}
+		
+		details := map[string]string{
+			"email": newUser.Email,
+			"role":  string(newUser.Role),
+			"name":  newUser.FullName,
+		}
+		_ = uc.audit.LogAction(ctx, "CREATE", "USER", newUser.ID, reqUUID, details)
+	}
 
 	return newUser, nil
 }

@@ -6,16 +6,18 @@ import (
 	"time"
 
 	"github.com/JosephAntonyDev/Notaria178_API/internal/work/domain/entities"
+	"github.com/JosephAntonyDev/Notaria178_API/internal/work/domain/events"
 	"github.com/JosephAntonyDev/Notaria178_API/internal/work/domain/repository"
 	"github.com/google/uuid"
 )
 
 type UpdateWorkUseCase struct {
-	repo repository.WorkRepository
+	repo  repository.WorkRepository
+	audit events.AuditLogger
 }
 
-func NewUpdateWorkUseCase(r repository.WorkRepository) *UpdateWorkUseCase {
-	return &UpdateWorkUseCase{repo: r}
+func NewUpdateWorkUseCase(r repository.WorkRepository, audit events.AuditLogger) *UpdateWorkUseCase {
+	return &UpdateWorkUseCase{repo: r, audit: audit}
 }
 
 func (uc *UpdateWorkUseCase) Execute(ctx context.Context, reqCtx RequestContext, workID string, req UpdateWorkRequest) (*WorkDetailDTO, error) {
@@ -105,6 +107,23 @@ func (uc *UpdateWorkUseCase) Execute(ctx context.Context, reqCtx RequestContext,
 		dedupReqs = []DeduplicatedReqDTO{}
 	}
 	workReqs, _ := uc.repo.GetWorkRequirements(ctx, work.ID)
+
+	if uc.audit != nil {
+		var reqUUID *uuid.UUID
+		if parsed, err := uuid.Parse(reqCtx.UserID); err == nil {
+			reqUUID = &parsed
+		}
+
+		details := map[string]interface{}{}
+		if req.Folio != nil {
+			details["new_folio"] = *req.Folio
+		}
+		if req.Deadline != nil {
+			details["new_deadline"] = *req.Deadline
+		}
+
+		_ = uc.audit.LogAction(ctx, "UPDATE", "WORK", work.ID, reqUUID, details)
+	}
 
 	return buildWorkDetail(work, acts, collabs, clientName, branchName, drafterName, clientInfo, dedupReqs, workReqs), nil
 }

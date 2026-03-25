@@ -19,6 +19,7 @@ func SetupDependencies(
 	db *sql.DB,
 	jwtSecret string,
 	auditAdapter workEvents.AuditLogger,
+	commentNotifier workEvents.CommentNotifier,
 ) *ws.Hub {
 	// Repositorio de work (necesario para validar acceso)
 	workRepository := workRepo.NewPostgresWorkRepository(db)
@@ -28,7 +29,7 @@ func SetupDependencies(
 	go hub.Run()
 
 	// Use cases existentes de work
-	addCommentUC := workApp.NewAddCommentUseCase(workRepository, auditAdapter)
+	addCommentUC := workApp.NewAddCommentUseCase(workRepository, auditAdapter, commentNotifier)
 	listCommentsUC := workApp.NewListCommentsUseCase(workRepository)
 
 	// Use cases de messaging

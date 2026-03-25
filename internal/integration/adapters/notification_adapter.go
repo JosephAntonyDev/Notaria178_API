@@ -5,6 +5,7 @@ import (
 
 	notifApp "github.com/JosephAntonyDev/Notaria178_API/internal/notification/app"
 	notifEntities "github.com/JosephAntonyDev/Notaria178_API/internal/notification/domain/entities"
+	"github.com/JosephAntonyDev/Notaria178_API/internal/work/domain/events"
 	"github.com/google/uuid"
 )
 
@@ -26,4 +27,25 @@ func (a *NotifierAdapter) SendNotification(ctx context.Context, userID uuid.UUID
 		Message: message,
 	}
 	return a.uc.Execute(ctx, input)
+}
+
+// CommentNotifierAdapter adapta *notifApp.NotifyNewCommentUseCase
+// para que cumpla la interfaz work/domain/events.CommentNotifier.
+type CommentNotifierAdapter struct {
+	uc *notifApp.NotifyNewCommentUseCase
+}
+
+func NewCommentNotifierAdapter(uc *notifApp.NotifyNewCommentUseCase) *CommentNotifierAdapter {
+	return &CommentNotifierAdapter{uc: uc}
+}
+
+func (a *CommentNotifierAdapter) NotifyNewComment(ctx context.Context, input events.CommentNotification) error {
+	return a.uc.Execute(ctx, notifApp.NotifyNewCommentInput{
+		WorkID:         input.WorkID,
+		WorkFolio:      input.WorkFolio,
+		CommentID:      input.CommentID,
+		CommentAuthor:  input.CommentAuthor,
+		CommentMessage: input.CommentMessage,
+		AuthorName:     input.AuthorName,
+	})
 }

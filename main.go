@@ -22,16 +22,17 @@ import (
 	notificationInfra "github.com/JosephAntonyDev/Notaria178_API/internal/notification/infra"
 	userInfra "github.com/JosephAntonyDev/Notaria178_API/internal/user/infra"
 	workInfra "github.com/JosephAntonyDev/Notaria178_API/internal/work/infra"
+	workRepo "github.com/JosephAntonyDev/Notaria178_API/internal/work/infra/repository"
 )
 
 func main() {
 	if err := godotenv.Load(); err != nil {
-		log.Println("No se encontró archivo .env, usando variables de entorno del sistema")
+		log.Println("No se encontro archivo .env, usando variables de entorno del sistema")
 	}
 
 	jwtSecret := os.Getenv("JWT_SECRET")
 	if jwtSecret == "" {
-		log.Fatal("Error fatal: JWT_SECRET no está configurado en el archivo .env")
+		log.Fatal("Error fatal: JWT_SECRET no esta configurado en el archivo .env")
 	}
 
 	db, err := core.GetDBPool()
@@ -40,7 +41,7 @@ func main() {
 	}
 	defer db.Close()
 
-	// ── Redis (opcional) ────────────────────────────────────────────────
+	// -- Redis (opcional) --
 	var cachePort cache.CachePort
 	redisAddr := os.Getenv("REDIS_ADDR")
 	if redisAddr != "" {
@@ -51,13 +52,13 @@ func main() {
 		}
 		rc, err := cache.NewRedisCache(redisAddr, redisPassword, redisDB)
 		if err != nil {
-			log.Printf("Advertencia: Redis no disponible, continuando sin caché: %v", err)
+			log.Printf("Advertencia: Redis no disponible, continuando sin cache: %v", err)
 		} else {
 			defer rc.Close()
 			cachePort = rc
 		}
 	} else {
-		log.Println("REDIS_ADDR no configurado, el servidor iniciará sin caché Redis")
+		log.Println("REDIS_ADDR no configurado, el servidor iniciara sin cache Redis")
 	}
 
 	r := gin.Default()
@@ -71,24 +72,31 @@ func main() {
 	documentInfra.SetupDependencies(r, db, jwtSecret)
 	dashboardInfra.SetupDependencies(r, db, jwtSecret, cachePort)
 
-	// Módulos que exponen sus use cases para integración cruzada
+	// Modulos que exponen sus use cases para integracion cruzada
 	logActionUC := auditInfra.SetupDependencies(r, db, jwtSecret)
-	createNotifUC := notificationInfra.SetupDependencies(r, db, jwtSecret)
+
+	// El repositorio de Work se necesita en el modulo de notificaciones
+	// para consultar los colaboradores al notificar comentarios.
+	pgWorkRepo := workRepo.NewPostgresWorkRepository(db)
+
+	// Modulo de notificaciones: recibe el work repo como CollaboratorGetter
+	notifResult := notificationInfra.SetupDependencies(r, db, jwtSecret, pgWorkRepo)
 
 	// Adaptadores que cumplen las interfaces de work/domain/events
 	auditAdapter := adapters.NewAuditLoggerAdapter(logActionUC)
-	notifAdapter := adapters.NewNotifierAdapter(createNotifUC)
+	notifAdapter := adapters.NewNotifierAdapter(notifResult.CreateNotifUC)
+	commentNotifAdapter := adapters.NewCommentNotifierAdapter(notifResult.NotifyNewCommentUC)
 
-	workInfra.SetupDependencies(r, db, jwtSecret, auditAdapter, notifAdapter, cachePort)
+	workInfra.SetupDependencies(r, db, jwtSecret, auditAdapter, notifAdapter, commentNotifAdapter, cachePort)
 	userInfra.SetupDependencies(r, db, jwtSecret, auditAdapter)
-	messagingInfra.SetupDependencies(r, db, jwtSecret, auditAdapter)
+	messagingInfra.SetupDependencies(r, db, jwtSecret, auditAdapter, commentNotifAdapter)
 
 	port := os.Getenv("PORT")
 	if port == "" {
 		port = "8080"
 	}
 
-	log.Printf("Servidor Notaría 178 iniciado en http://localhost:%s", port)
+	log.Printf("Servidor Notaria 178 iniciado en http://localhost:%s", port)
 	if err := r.Run(":" + port); err != nil {
 		log.Fatalf("Error al iniciar el servidor: %v", err)
 	}

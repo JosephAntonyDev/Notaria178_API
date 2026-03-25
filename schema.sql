@@ -135,15 +135,37 @@ CREATE TABLE work_comments (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
+-- Tabla para guardar los tokens FCM de los dispositivos de cada usuario
+CREATE TABLE user_device_tokens (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID REFERENCES users(id) ON DELETE CASCADE,
+    fcm_token VARCHAR(255) UNIQUE NOT NULL,
+    device_type VARCHAR(50) DEFAULT 'web', -- 'web', 'android', 'ios'
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Índices para mejorar el rendimiento
+CREATE INDEX IF NOT EXISTS idx_user_device_tokens_user_id ON user_device_tokens(user_id);
+CREATE INDEX IF NOT EXISTS idx_user_device_tokens_fcm_token ON user_device_tokens(fcm_token);
+
 CREATE TABLE notifications (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id UUID REFERENCES users(id) ON DELETE CASCADE, -- Owner of the notification
     work_id UUID REFERENCES works(id) ON DELETE CASCADE, -- Direct link to the dossier
     type notification_type NOT NULL,
-    message VARCHAR(255) NOT NULL,
+    title VARCHAR(100), -- Título para la notificación push
+    body TEXT, -- Cuerpo detallado para la notificación push
+    message VARCHAR(255) NOT NULL, -- Mensaje corto para compatibilidad con código existente
     is_read BOOLEAN DEFAULT FALSE,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
+
+-- Índices para la tabla notifications
+CREATE INDEX IF NOT EXISTS idx_notifications_user_id ON notifications(user_id);
+CREATE INDEX IF NOT EXISTS idx_notifications_work_id ON notifications(work_id);
+CREATE INDEX IF NOT EXISTS idx_notifications_is_read ON notifications(is_read);
+CREATE INDEX IF NOT EXISTS idx_notifications_created_at ON notifications(created_at DESC);
 
 CREATE TABLE audit_logs (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),

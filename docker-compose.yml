@@ -42,8 +42,10 @@ services:
       REDIS_ADDR: redis:6379
       REDIS_PASSWORD: ""
       REDIS_DB: 0
+      FIREBASE_CREDENTIALS_PATH: /app/firebase-credentials.json
     volumes:
       - ./uploads:/var/uploads/notaria178
+      - ./notaria178-firebase-admin.json:/app/firebase-credentials.json:ro
 
 volumes:
   pg_data:

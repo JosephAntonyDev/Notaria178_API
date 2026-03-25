@@ -18,6 +18,7 @@ import (
 	dashboardInfra "github.com/JosephAntonyDev/Notaria178_API/internal/dashboard/infra"
 	documentInfra "github.com/JosephAntonyDev/Notaria178_API/internal/document/infra"
 	"github.com/JosephAntonyDev/Notaria178_API/internal/integration/adapters"
+	messagingInfra "github.com/JosephAntonyDev/Notaria178_API/internal/messaging/infra"
 	notificationInfra "github.com/JosephAntonyDev/Notaria178_API/internal/notification/infra"
 	userInfra "github.com/JosephAntonyDev/Notaria178_API/internal/user/infra"
 	workInfra "github.com/JosephAntonyDev/Notaria178_API/internal/work/infra"
@@ -80,6 +81,7 @@ func main() {
 
 	workInfra.SetupDependencies(r, db, jwtSecret, auditAdapter, notifAdapter, cachePort)
 	userInfra.SetupDependencies(r, db, jwtSecret, auditAdapter)
+	messagingInfra.SetupDependencies(r, db, jwtSecret, auditAdapter)
 
 	port := os.Getenv("PORT")
 	if port == "" {

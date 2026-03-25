@@ -28,6 +28,7 @@ coverage.txt
 !.env.example # Permitir subir un archivo de ejemplo vacío para que sepas qué variables necesitas
 schema.sql
 venv/
+notaria178-firebase-admin.json
 
 # ==========================================
 # 4. ARCHIVOS LOCALES DE LA NOTARÍA

@@ -4,8 +4,8 @@ import "github.com/JosephAntonyDev/Notaria178_API/internal/work/domain/entities"
 
 // ─── Helpers de acceso ──────────────────────────────────────────────────────
 
-// canAccessWork verifica si el usuario puede VER el expediente
-func canAccessWork(work *entities.Work, reqCtx RequestContext, isCollaborator bool) bool {
+// CanAccessWork verifica si el usuario puede VER el expediente (exportado para uso en otros módulos)
+func CanAccessWork(work *entities.Work, reqCtx RequestContext, isCollaborator bool) bool {
 	if reqCtx.UserRole == "SUPER_ADMIN" {
 		return true
 	}

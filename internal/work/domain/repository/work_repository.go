@@ -12,7 +12,7 @@ type WorkFilters struct {
 	Offset       int
 	Search       *string // búsqueda por folio
 	Status       *string
-	BranchID     *string // filtro por sucursal (admins, data_entry)
+	BranchID     *string // filtro por oficina (admins, data_entry)
 	ScopedUserID *string // solo trabajos donde el usuario es proyectista o colaborador
 	StartDate    *string // filtro created_at >= (formato YYYY-MM-DD)
 	EndDate      *string // filtro created_at <= (formato YYYY-MM-DD)

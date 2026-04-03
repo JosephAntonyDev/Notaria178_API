@@ -8,9 +8,10 @@ import (
 // ─── Filtros comunes para todos los endpoints del dashboard ─────────────────
 
 type DashboardFilters struct {
-	BranchID  *string
-	StartDate time.Time
-	EndDate   time.Time
+	BranchID     *string
+	ScopedUserID *string // Para DRAFTER/DATA_ENTRY: solo trabajos donde es proyectista o colaborador
+	StartDate    time.Time
+	EndDate      time.Time
 }
 
 // ─── Resultados de KPIs ─────────────────────────────────────────────────────

@@ -21,7 +21,7 @@ func NewCreateBranchUseCase(r repository.BranchRepository) *CreateBranchUseCase 
 func (uc *CreateBranchUseCase) Execute(ctx context.Context, req CreateBranchRequest) (*BranchDTO, error) {
 	existing, _ := uc.repo.GetByName(ctx, req.Name)
 	if existing != nil {
-		return nil, errors.New("el nombre de la sucursal ya está registrado")
+		return nil, errors.New("el nombre de la oficina ya está registrado")
 	}
 
 	newBranch := &entities.Branch{

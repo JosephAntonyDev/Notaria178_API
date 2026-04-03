@@ -124,6 +124,8 @@ CREATE TABLE documents (
     category document_category NOT NULL,
     version INT DEFAULT 1,
     file_path TEXT NOT NULL, -- Physical path in Ubuntu Server (/var/uploads/...)
+    requirement_id UUID REFERENCES act_requirements(id) ON DELETE SET NULL,
+    requirement_source VARCHAR(50),
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 

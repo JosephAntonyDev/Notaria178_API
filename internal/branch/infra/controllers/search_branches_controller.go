@@ -41,7 +41,7 @@ func (ctrl *SearchBranchesController) Handle(c *gin.Context) {
 
 	branches, err := ctrl.useCase.Execute(c.Request.Context(), filters)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error interno al buscar sucursales"})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error interno al buscar oficinas"})
 		return
 	}
 

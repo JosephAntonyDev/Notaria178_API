@@ -103,7 +103,7 @@ class TestT04CreateWork:
     """Crea un expediente de prueba. Necesita branch_id y act_id existentes."""
 
     def _get_or_create_branch(self):
-        """Obtiene la primera sucursal o crea una."""
+        """Obtiene la primera oficina o crea una."""
         resp = requests.get(
             f"{BASE_URL}/branches/search",
             headers=auth_headers(),
@@ -115,11 +115,11 @@ class TestT04CreateWork:
             state.branch_id = items[0]["id"]
             return
 
-        # Crear sucursal si no existe
+        # Crear oficina si no existe
         resp = requests.post(
             f"{BASE_URL}/branches/create",
             headers=auth_headers(),
-            json={"name": "Sucursal E2E", "address": "Dirección de prueba"},
+            json={"name": "Oficina E2E", "address": "Dirección de prueba"},
         )
         assert resp.status_code in (200, 201), f"Crear branch falló: {resp.text}"
         branch_data = resp.json()

@@ -20,6 +20,9 @@ func NewGetTopDraftersUseCase(r repository.DashboardRepository, c cache.CachePor
 
 func (uc *GetTopDraftersUseCase) Execute(
 	ctx context.Context,
+	userRole string,
+	userID string,
+	userBranchID string,
 	branchID *string,
 	timeframe string,
 	startDate, endDate *string,
@@ -32,9 +35,22 @@ func (uc *GetTopDraftersUseCase) Execute(
 
 	start, end := ResolveTimeRange(timeframe, startDate, endDate)
 
+	// ── Data Scoping basado en rol ─────────────────────────────────────
+	var scopedUserID *string
+	switch userRole {
+	case "SUPER_ADMIN":
+		// Ve ranking completo.
+	case "LOCAL_ADMIN":
+		branchID = &userBranchID
+	case "DRAFTER", "DATA_ENTRY":
+		// Solo ve su propio ranking personal.
+		scopedUserID = &userID
+	}
+
 	// ── Cache key determinista ──────────────────────────────────────────
-	cacheKey := fmt.Sprintf("dashboard:topdrafters:%s:%s:%s:%d",
+	cacheKey := fmt.Sprintf("dashboard:topdrafters:%s:%s:%s:%s:%d",
 		branchKeyPart(branchID),
+		userKeyPart(scopedUserID),
 		start.Format("2006-01-02"),
 		end.Format("2006-01-02"),
 		limit,
@@ -50,9 +66,10 @@ func (uc *GetTopDraftersUseCase) Execute(
 
 	// ── Cache miss → PostgreSQL ─────────────────────────────────────────
 	filters := repository.DashboardFilters{
-		BranchID:  branchID,
-		StartDate: start,
-		EndDate:   end,
+		BranchID:     branchID,
+		ScopedUserID: scopedUserID,
+		StartDate:    start,
+		EndDate:      end,
 	}
 
 	rows, err := uc.repo.GetTopDrafters(ctx, filters, limit)

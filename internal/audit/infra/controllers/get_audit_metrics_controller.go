@@ -33,7 +33,18 @@ func (ctrl *GetAuditMetricsController) Handle(c *gin.Context) {
 		return
 	}
 
+	// ── Data Scoping por rol ────────────────────────────────────────────
+	userRole := c.GetString("userRole")
+	jwtUserID := c.GetString("userID")
+
+	var effectiveUserID *string
+	switch userRole {
+	case "DRAFTER", "DATA_ENTRY":
+		effectiveUserID = &jwtUserID
+	}
+
 	filters := repository.AuditFilters{
+		UserID:    effectiveUserID,
 		StartDate: query.StartDate,
 		EndDate:   query.EndDate,
 	}

@@ -21,6 +21,9 @@ func NewGetDistributionUseCase(r repository.DashboardRepository, c cache.CachePo
 
 func (uc *GetDistributionUseCase) Execute(
 	ctx context.Context,
+	userRole string,
+	userID string,
+	userBranchID string,
 	branchID *string,
 	timeframe string,
 	startDate, endDate *string,
@@ -28,9 +31,21 @@ func (uc *GetDistributionUseCase) Execute(
 
 	start, end := ResolveTimeRange(timeframe, startDate, endDate)
 
+	// ── Data Scoping basado en rol ─────────────────────────────────────
+	var scopedUserID *string
+	switch userRole {
+	case "SUPER_ADMIN":
+		// Ve todo.
+	case "LOCAL_ADMIN":
+		branchID = &userBranchID
+	case "DRAFTER", "DATA_ENTRY":
+		scopedUserID = &userID
+	}
+
 	// ── Cache key determinista ──────────────────────────────────────────
-	cacheKey := fmt.Sprintf("dashboard:dist:%s:%s:%s",
+	cacheKey := fmt.Sprintf("dashboard:dist:%s:%s:%s:%s",
 		branchKeyPart(branchID),
+		userKeyPart(scopedUserID),
 		start.Format("2006-01-02"),
 		end.Format("2006-01-02"),
 	)
@@ -45,9 +60,10 @@ func (uc *GetDistributionUseCase) Execute(
 
 	// ── Cache miss → PostgreSQL ─────────────────────────────────────────
 	filters := repository.DashboardFilters{
-		BranchID:  branchID,
-		StartDate: start,
-		EndDate:   end,
+		BranchID:     branchID,
+		ScopedUserID: scopedUserID,
+		StartDate:    start,
+		EndDate:      end,
 	}
 
 	rows, err := uc.repo.GetDistribution(ctx, filters)

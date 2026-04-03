@@ -21,8 +21,11 @@ func NewGetRecentActivityUseCase(r repository.DashboardRepository, c cache.Cache
 
 func (uc *GetRecentActivityUseCase) Execute(
 	ctx context.Context,
+	userRole string,
+	userID string,
+	userBranchID string,
 	branchID *string,
-	userID *string,
+	requestedUserID *string,
 	entityID *string,
 	timeframe string,
 	startDate, endDate *string,
@@ -31,10 +34,21 @@ func (uc *GetRecentActivityUseCase) Execute(
 
 	start, end := ResolveTimeRange(timeframe, startDate, endDate)
 
+	// ── Data Scoping basado en rol ─────────────────────────────────────
+	switch userRole {
+	case "SUPER_ADMIN":
+		// Ve toda la actividad.
+	case "LOCAL_ADMIN":
+		branchID = &userBranchID
+	case "DRAFTER", "DATA_ENTRY":
+		// Solo ve sus propias acciones.
+		requestedUserID = &userID
+	}
+
 	// ── Cache key determinista ──────────────────────────────────────────
 	cacheKey := fmt.Sprintf("dashboard:activity:%s:%s:%s:%s:%s:%d:%d",
 		branchKeyPart(branchID),
-		ptrKeyPart(userID),
+		ptrKeyPart(requestedUserID),
 		ptrKeyPart(entityID),
 		start.Format("2006-01-02"),
 		end.Format("2006-01-02"),
@@ -52,7 +66,7 @@ func (uc *GetRecentActivityUseCase) Execute(
 	// ── Cache miss → PostgreSQL ─────────────────────────────────────────
 	filters := repository.ActivityFilters{
 		BranchID:  branchID,
-		UserID:    userID,
+		UserID:    requestedUserID,
 		EntityID:  entityID,
 		StartDate: start,
 		EndDate:   end,

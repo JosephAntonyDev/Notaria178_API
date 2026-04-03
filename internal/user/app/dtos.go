@@ -46,13 +46,13 @@ func ToUserPublicDTO(user *entities.User, branch *branchEntities.Branch) UserPub
 		branchDTO = &BranchDTO{
 			Name:     branch.Name,
 			Address:  branch.Address,
-			ImageURL: getBranchImageURL(branch.Name), 
+			ImageURL: getBranchImageURL(branch.Name),
 		}
 	} else {
 		branchDTO = &BranchDTO{
-			Name:     "Sucursal no asignada",
+			Name:     "Oficina no asignada",
 			Address:  nil,
-			ImageURL: "https://images.unsplash.com/photo-1497366216548-37526070297c?auto=format&fit=crop&q=80&w=2069", 
+			ImageURL: "https://images.unsplash.com/photo-1497366216548-37526070297c?auto=format&fit=crop&q=80&w=2069",
 		}
 	}
 

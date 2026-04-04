@@ -19,6 +19,7 @@ type AuditLogger interface {
 // Notifier permite enviar notificaciones a usuarios desde el modulo work.
 type Notifier interface {
 	SendNotification(ctx context.Context, userID uuid.UUID, workID *uuid.UUID, notifType string, message string) error
+	NotifySuperAdmins(ctx context.Context, workID *uuid.UUID, notifType string, message string) error
 }
 
 // CommentNotifier permite disparar notificaciones push + in-app al crear un comentario.

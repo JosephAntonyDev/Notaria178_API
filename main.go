@@ -21,6 +21,7 @@ import (
 	messagingInfra "github.com/JosephAntonyDev/Notaria178_API/internal/messaging/infra"
 	notificationInfra "github.com/JosephAntonyDev/Notaria178_API/internal/notification/infra"
 	userInfra "github.com/JosephAntonyDev/Notaria178_API/internal/user/infra"
+	userRepoImpl "github.com/JosephAntonyDev/Notaria178_API/internal/user/infra/repository"
 	workInfra "github.com/JosephAntonyDev/Notaria178_API/internal/work/infra"
 	workRepo "github.com/JosephAntonyDev/Notaria178_API/internal/work/infra/repository"
 )
@@ -84,7 +85,8 @@ func main() {
 
 	// Adaptadores que cumplen las interfaces de work/domain/events
 	auditAdapter := adapters.NewAuditLoggerAdapter(logActionUC)
-	notifAdapter := adapters.NewNotifierAdapter(notifResult.CreateNotifUC)
+	pgUserRepo := userRepoImpl.NewPostgresUserRepository(db)
+	notifAdapter := adapters.NewNotifierAdapter(notifResult.CreateNotifUC, pgUserRepo)
 	commentNotifAdapter := adapters.NewCommentNotifierAdapter(notifResult.NotifyNewCommentUC)
 
 	workInfra.SetupDependencies(r, db, jwtSecret, auditAdapter, notifAdapter, commentNotifAdapter, cachePort)

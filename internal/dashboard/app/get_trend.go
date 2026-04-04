@@ -20,6 +20,9 @@ func NewGetTrendUseCase(r repository.DashboardRepository, c cache.CachePort) *Ge
 
 func (uc *GetTrendUseCase) Execute(
 	ctx context.Context,
+	userRole string,
+	userID string,
+	userBranchID string,
 	branchID *string,
 	timeframe string,
 	startDate, endDate *string,
@@ -36,9 +39,23 @@ func (uc *GetTrendUseCase) Execute(
 
 	start, end := ResolveTimeRange(timeframe, startDate, endDate)
 
+	// ── Data Scoping basado en rol ─────────────────────────────────────
+	var scopedUserID *string
+	switch userRole {
+	case "SUPER_ADMIN":
+		// Ve todo; si envía BranchID por URL se respeta.
+	case "LOCAL_ADMIN":
+		// Forzar aislamiento por oficina.
+		branchID = &userBranchID
+	case "DRAFTER", "DATA_ENTRY":
+		// Solo trabajos donde es proyectista o colaborador.
+		scopedUserID = &userID
+	}
+
 	// ── Cache key determinista ──────────────────────────────────────────
-	cacheKey := fmt.Sprintf("dashboard:trend:%s:%s:%s:%s",
+	cacheKey := fmt.Sprintf("dashboard:trend:%s:%s:%s:%s:%s",
 		branchKeyPart(branchID),
+		userKeyPart(scopedUserID),
 		start.Format("2006-01-02"),
 		end.Format("2006-01-02"),
 		groupBy,
@@ -54,9 +71,10 @@ func (uc *GetTrendUseCase) Execute(
 
 	// ── Cache miss → PostgreSQL ─────────────────────────────────────────
 	filters := repository.DashboardFilters{
-		BranchID:  branchID,
-		StartDate: start,
-		EndDate:   end,
+		BranchID:     branchID,
+		ScopedUserID: scopedUserID,
+		StartDate:    start,
+		EndDate:      end,
 	}
 
 	rows, err := uc.repo.GetTrend(ctx, filters, groupBy)

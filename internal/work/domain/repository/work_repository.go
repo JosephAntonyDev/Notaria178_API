@@ -12,7 +12,7 @@ type WorkFilters struct {
 	Offset       int
 	Search       *string // búsqueda por folio
 	Status       *string
-	BranchID     *string // filtro por sucursal (admins, data_entry)
+	BranchID     *string // filtro por oficina (admins, data_entry)
 	ScopedUserID *string // solo trabajos donde el usuario es proyectista o colaborador
 	StartDate    *string // filtro created_at >= (formato YYYY-MM-DD)
 	EndDate      *string // filtro created_at <= (formato YYYY-MM-DD)
@@ -38,6 +38,7 @@ type WorkRepository interface {
 	AddCollaborator(ctx context.Context, workID uuid.UUID, userID uuid.UUID) error
 	RemoveCollaborator(ctx context.Context, workID uuid.UUID, userID uuid.UUID) error
 	GetCollaborators(ctx context.Context, workID uuid.UUID) ([]entities.WorkCollaboratorInfo, error)
+	GetUsersToNotifyForWork(ctx context.Context, workID uuid.UUID) ([]entities.WorkCollaboratorInfo, error)
 	IsCollaborator(ctx context.Context, workID uuid.UUID, userID uuid.UUID) (bool, error)
 
 	// Comentarios

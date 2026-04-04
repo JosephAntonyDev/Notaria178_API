@@ -11,7 +11,7 @@ import (
 
 func (repo *PostgresNotificationRepository) ListByUser(ctx context.Context, userID uuid.UUID, filters repository.NotificationFilters) ([]*entities.Notification, error) {
 	baseQuery := `
-		SELECT id, user_id, work_id, type, message, is_read, created_at
+		SELECT id, user_id, work_id, type, title, body, message, is_read, created_at
 		FROM notifications
 		WHERE user_id = $1
 	`
@@ -36,7 +36,7 @@ func (repo *PostgresNotificationRepository) ListByUser(ctx context.Context, user
 	notifs := make([]*entities.Notification, 0)
 	for rows.Next() {
 		var n entities.Notification
-		if err := rows.Scan(&n.ID, &n.UserID, &n.WorkID, &n.Type, &n.Message, &n.IsRead, &n.CreatedAt); err != nil {
+		if err := rows.Scan(&n.ID, &n.UserID, &n.WorkID, &n.Type, &n.Title, &n.Body, &n.Message, &n.IsRead, &n.CreatedAt); err != nil {
 			return nil, err
 		}
 		notifs = append(notifs, &n)

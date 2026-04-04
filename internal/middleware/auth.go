@@ -7,20 +7,28 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v4"
-	
+
 	"github.com/JosephAntonyDev/Notaria178_API/internal/user/domain/entities"
 )
 
 func AuthMiddleware(jwtSecret string) gin.HandlerFunc {
 	return func(c *gin.Context) {
+		var tokenString string
+
+		// Primero intentar obtener token del header Authorization
 		authHeader := c.GetHeader("Authorization")
-		if authHeader == "" {
+		if authHeader != "" {
+			tokenString = strings.TrimPrefix(authHeader, "Bearer ")
+		} else {
+			// Fallback: obtener token del query string (para WebSocket)
+			tokenString = c.Query("token")
+		}
+
+		if tokenString == "" {
 			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Falta el token de autorización"})
 			return
 		}
 
-		tokenString := strings.TrimPrefix(authHeader, "Bearer ")
-		
 		token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
 			if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
 				return nil, fmt.Errorf("método de firma fraudulento")
@@ -43,11 +51,11 @@ func AuthMiddleware(jwtSecret string) gin.HandlerFunc {
 		if sub, ok := claims["sub"].(string); ok { // sub = Subject (ID del usuario)
 			c.Set("userID", sub)
 		}
-		
+
 		if role, ok := claims["role"].(string); ok {
 			c.Set("userRole", role)
 		}
-		
+
 		if branchID, ok := claims["branch_id"].(string); ok {
 			c.Set("branchID", branchID)
 		}
@@ -55,7 +63,6 @@ func AuthMiddleware(jwtSecret string) gin.HandlerFunc {
 		c.Next()
 	}
 }
-
 
 func RequireRoles(allowedRoles ...entities.UserRole) gin.HandlerFunc {
 	return func(c *gin.Context) {

@@ -24,7 +24,7 @@ func (ctrl *CreateBranchController) Handle(c *gin.Context) {
 
 	branch, err := ctrl.useCase.Execute(c.Request.Context(), req)
 	if err != nil {
-		if err.Error() == "el nombre de la sucursal ya está registrado" {
+		if err.Error() == "el nombre de la oficina ya está registrado" {
 			c.JSON(http.StatusConflict, gin.H{"error": err.Error()})
 			return
 		}
@@ -33,7 +33,7 @@ func (ctrl *CreateBranchController) Handle(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusCreated, gin.H{
-		"message": "Sucursal creada exitosamente",
+		"message": "Oficina creada exitosamente",
 		"data":    branch,
 	})
 }

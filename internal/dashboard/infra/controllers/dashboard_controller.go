@@ -64,6 +64,14 @@ func NewDashboardController(
 	}
 }
 
+// ─── Helpers JWT ────────────────────────────────────────────────────────────
+
+// extractJWTData extrae userRole, userID y branchID del contexto Gin
+// (seteados por AuthMiddleware).
+func extractJWTData(c *gin.Context) (userRole, userID, userBranchID string) {
+	return c.GetString("userRole"), c.GetString("userID"), c.GetString("branchID")
+}
+
 // ─── GET /dashboard/kpis ────────────────────────────────────────────────────
 
 func (ctrl *DashboardController) HandleKPIs(c *gin.Context) {
@@ -73,8 +81,13 @@ func (ctrl *DashboardController) HandleKPIs(c *gin.Context) {
 		return
 	}
 
+	userRole, userID, userBranchID := extractJWTData(c)
+
 	result, err := ctrl.getKPIs.Execute(
 		c.Request.Context(),
+		userRole,
+		userID,
+		userBranchID,
 		query.BranchID,
 		query.Timeframe,
 		query.StartDate,
@@ -97,8 +110,13 @@ func (ctrl *DashboardController) HandleTrend(c *gin.Context) {
 		return
 	}
 
+	userRole, userID, userBranchID := extractJWTData(c)
+
 	result, err := ctrl.getTrend.Execute(
 		c.Request.Context(),
+		userRole,
+		userID,
+		userBranchID,
 		query.DashboardQuery.BranchID,
 		query.DashboardQuery.Timeframe,
 		query.DashboardQuery.StartDate,
@@ -122,8 +140,13 @@ func (ctrl *DashboardController) HandleDistribution(c *gin.Context) {
 		return
 	}
 
+	userRole, userID, userBranchID := extractJWTData(c)
+
 	result, err := ctrl.getDistribution.Execute(
 		c.Request.Context(),
+		userRole,
+		userID,
+		userBranchID,
 		query.BranchID,
 		query.Timeframe,
 		query.StartDate,
@@ -153,8 +176,13 @@ func (ctrl *DashboardController) HandleActivity(c *gin.Context) {
 		query.Limit = 20
 	}
 
+	userRole, userID, userBranchID := extractJWTData(c)
+
 	result, err := ctrl.getActivity.Execute(
 		c.Request.Context(),
+		userRole,
+		userID,
+		userBranchID,
 		query.DashboardQuery.BranchID,
 		query.UserID,
 		query.EntityID,
@@ -189,8 +217,13 @@ func (ctrl *DashboardController) HandleTopDrafters(c *gin.Context) {
 		}
 	}
 
+	userRole, userID, userBranchID := extractJWTData(c)
+
 	result, err := ctrl.getTopDrafters.Execute(
 		c.Request.Context(),
+		userRole,
+		userID,
+		userBranchID,
 		query.DashboardQuery.BranchID,
 		query.DashboardQuery.Timeframe,
 		query.DashboardQuery.StartDate,
@@ -222,8 +255,13 @@ func (ctrl *DashboardController) HandleTopActs(c *gin.Context) {
 		}
 	}
 
+	userRole, userID, userBranchID := extractJWTData(c)
+
 	result, err := ctrl.getTopActs.Execute(
 		c.Request.Context(),
+		userRole,
+		userID,
+		userBranchID,
 		query.DashboardQuery.BranchID,
 		query.DashboardQuery.Timeframe,
 		query.DashboardQuery.StartDate,

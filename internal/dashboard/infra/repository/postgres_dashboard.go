@@ -22,20 +22,29 @@ func (r *PostgresDashboardRepository) GetKPIs(ctx context.Context, filters domai
 	query := `
 		SELECT
 			COUNT(*)                                            AS total,
-			COUNT(*) FILTER (WHERE status = 'PENDING')          AS pending,
-			COUNT(*) FILTER (WHERE status = 'IN_PROGRESS')      AS in_progress,
-			COUNT(*) FILTER (WHERE status = 'READY_FOR_REVIEW') AS ready_for_review,
-			COUNT(*) FILTER (WHERE status = 'APPROVED')         AS approved,
-			COUNT(*) FILTER (WHERE status = 'REJECTED')         AS rejected
-		FROM works
-		WHERE created_at >= $1 AND created_at < $2
+			COUNT(*) FILTER (WHERE w.status = 'PENDING')          AS pending,
+			COUNT(*) FILTER (WHERE w.status = 'IN_PROGRESS')      AS in_progress,
+			COUNT(*) FILTER (WHERE w.status = 'READY_FOR_REVIEW') AS ready_for_review,
+			COUNT(*) FILTER (WHERE w.status = 'APPROVED')         AS approved,
+			COUNT(*) FILTER (WHERE w.status = 'REJECTED')         AS rejected
+		FROM works w
+		WHERE w.created_at >= $1 AND w.created_at < $2
 	`
 	args := []interface{}{filters.StartDate, filters.EndDate}
 	argID := 3
 
 	if filters.BranchID != nil && *filters.BranchID != "" && *filters.BranchID != "all" {
-		query += ` AND branch_id = $` + strconv.Itoa(argID)
+		query += ` AND w.branch_id = $` + strconv.Itoa(argID)
 		args = append(args, *filters.BranchID)
+		argID++
+	}
+
+	// Filtro para DRAFTER/DATA_ENTRY: solo trabajos donde es proyectista o colaborador
+	if filters.ScopedUserID != nil && *filters.ScopedUserID != "" {
+		query += ` AND (w.main_drafter_id = $` + strconv.Itoa(argID) + ` OR EXISTS (
+			SELECT 1 FROM work_collaborators wc WHERE wc.work_id = w.id AND wc.user_id = $` + strconv.Itoa(argID) + `
+		))`
+		args = append(args, *filters.ScopedUserID)
 	}
 
 	var result domainRepo.KPIsResult
@@ -60,18 +69,27 @@ func (r *PostgresDashboardRepository) GetTrend(ctx context.Context, filters doma
 	// Validamos en el use case; aquí solo lo usamos.
 	query := `
 		SELECT
-			date_trunc('` + groupBy + `', created_at)::date AS period,
+			date_trunc('` + groupBy + `', w.created_at)::date AS period,
 			COUNT(*)                                        AS created,
-			COUNT(*) FILTER (WHERE status = 'APPROVED')     AS approved
-		FROM works
-		WHERE created_at >= $1 AND created_at < $2
+			COUNT(*) FILTER (WHERE w.status = 'APPROVED')     AS approved
+		FROM works w
+		WHERE w.created_at >= $1 AND w.created_at < $2
 	`
 	args := []interface{}{filters.StartDate, filters.EndDate}
 	argID := 3
 
 	if filters.BranchID != nil && *filters.BranchID != "" && *filters.BranchID != "all" {
-		query += ` AND branch_id = $` + strconv.Itoa(argID)
+		query += ` AND w.branch_id = $` + strconv.Itoa(argID)
 		args = append(args, *filters.BranchID)
+		argID++
+	}
+
+	// Filtro para DRAFTER/DATA_ENTRY
+	if filters.ScopedUserID != nil && *filters.ScopedUserID != "" {
+		query += ` AND (w.main_drafter_id = $` + strconv.Itoa(argID) + ` OR EXISTS (
+			SELECT 1 FROM work_collaborators wc WHERE wc.work_id = w.id AND wc.user_id = $` + strconv.Itoa(argID) + `
+		))`
+		args = append(args, *filters.ScopedUserID)
 	}
 
 	query += ` GROUP BY period ORDER BY period ASC`
@@ -97,19 +115,28 @@ func (r *PostgresDashboardRepository) GetTrend(ctx context.Context, filters doma
 
 func (r *PostgresDashboardRepository) GetDistribution(ctx context.Context, filters domainRepo.DashboardFilters) ([]domainRepo.DistributionRow, error) {
 	query := `
-		SELECT status::text, COUNT(*) AS count
-		FROM works
-		WHERE created_at >= $1 AND created_at < $2
+		SELECT w.status::text, COUNT(*) AS count
+		FROM works w
+		WHERE w.created_at >= $1 AND w.created_at < $2
 	`
 	args := []interface{}{filters.StartDate, filters.EndDate}
 	argID := 3
 
 	if filters.BranchID != nil && *filters.BranchID != "" && *filters.BranchID != "all" {
-		query += ` AND branch_id = $` + strconv.Itoa(argID)
+		query += ` AND w.branch_id = $` + strconv.Itoa(argID)
 		args = append(args, *filters.BranchID)
+		argID++
 	}
 
-	query += ` GROUP BY status ORDER BY count DESC`
+	// Filtro para DRAFTER/DATA_ENTRY
+	if filters.ScopedUserID != nil && *filters.ScopedUserID != "" {
+		query += ` AND (w.main_drafter_id = $` + strconv.Itoa(argID) + ` OR EXISTS (
+			SELECT 1 FROM work_collaborators wc WHERE wc.work_id = w.id AND wc.user_id = $` + strconv.Itoa(argID) + `
+		))`
+		args = append(args, *filters.ScopedUserID)
+	}
+
+	query += ` GROUP BY w.status ORDER BY count DESC`
 
 	rows, err := r.db.QueryContext(ctx, query, args...)
 	if err != nil {
@@ -230,6 +257,13 @@ func (r *PostgresDashboardRepository) GetTopDrafters(ctx context.Context, filter
 		argID++
 	}
 
+	// Filtro para DRAFTER/DATA_ENTRY: solo ver su propio ranking
+	if filters.ScopedUserID != nil && *filters.ScopedUserID != "" {
+		query += ` AND u.id = $` + strconv.Itoa(argID)
+		args = append(args, *filters.ScopedUserID)
+		argID++
+	}
+
 	query += ` GROUP BY u.id, u.full_name, u.role ORDER BY work_count DESC LIMIT $` + strconv.Itoa(argID)
 	args = append(args, limit)
 
@@ -266,6 +300,15 @@ func (r *PostgresDashboardRepository) GetTopActs(ctx context.Context, filters do
 	if filters.BranchID != nil && *filters.BranchID != "" && *filters.BranchID != "all" {
 		query += ` AND w.branch_id = $` + strconv.Itoa(argID)
 		args = append(args, *filters.BranchID)
+		argID++
+	}
+
+	// Filtro para DRAFTER/DATA_ENTRY
+	if filters.ScopedUserID != nil && *filters.ScopedUserID != "" {
+		query += ` AND (w.main_drafter_id = $` + strconv.Itoa(argID) + ` OR EXISTS (
+			SELECT 1 FROM work_collaborators wc WHERE wc.work_id = w.id AND wc.user_id = $` + strconv.Itoa(argID) + `
+		))`
+		args = append(args, *filters.ScopedUserID)
 		argID++
 	}
 

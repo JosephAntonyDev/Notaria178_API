@@ -27,11 +27,11 @@ func (ctrl *UpdateBranchController) Handle(c *gin.Context) {
 	branch, err := ctrl.useCase.Execute(c.Request.Context(), branchID, req)
 	if err != nil {
 		switch err.Error() {
-		case "ID de sucursal inválido":
+		case "ID de oficina inválido":
 			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-		case "sucursal no encontrada":
+		case "oficina no encontrada":
 			c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
-		case "el nombre de la sucursal ya está registrado":
+		case "el nombre de la oficina ya está registrado":
 			c.JSON(http.StatusConflict, gin.H{"error": err.Error()})
 		default:
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Error interno del servidor"})
@@ -40,7 +40,7 @@ func (ctrl *UpdateBranchController) Handle(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{
-		"message": "Sucursal actualizada exitosamente",
+		"message": "Oficina actualizada exitosamente",
 		"data":    branch,
 	})
 }

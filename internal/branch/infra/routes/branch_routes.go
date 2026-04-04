@@ -21,7 +21,7 @@ func SetupBranchRoutes(
 		// Accesible para cualquier empleado logueado
 		api.GET("/search", searchBranchesCtrl.Handle)
 
-		// Restringido a administradores (solo SUPER_ADMIN gestiona sucursales)
+		// Restringido a administradores (solo SUPER_ADMIN gestiona oficinas)
 		adminOnly := api.Group("")
 		adminOnly.Use(middleware.RequireRoles(entities.RoleSuperAdmin, entities.RoleLocalAdmin))
 		{

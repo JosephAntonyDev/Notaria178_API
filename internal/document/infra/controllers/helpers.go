@@ -1,6 +1,7 @@
 package controllers
 
 import (
+	"log"
 	"net/http"
 	"strings"
 
@@ -10,6 +11,7 @@ import (
 // handleUseCaseError mapea los errores de la capa de aplicación a códigos HTTP
 func handleUseCaseError(c *gin.Context, err error) {
 	msg := err.Error()
+	log.Printf("[ERR] handleUseCaseError: %v", msg)
 	switch {
 	case strings.Contains(msg, "inválido") || strings.Contains(msg, "inválida"):
 		c.JSON(http.StatusBadRequest, gin.H{"error": msg})

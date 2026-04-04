@@ -5,7 +5,6 @@ import (
 
 	"github.com/JosephAntonyDev/Notaria178_API/internal/dashboard/infra/controllers"
 	"github.com/JosephAntonyDev/Notaria178_API/internal/middleware"
-	"github.com/JosephAntonyDev/Notaria178_API/internal/user/domain/entities"
 )
 
 func SetupDashboardRoutes(
@@ -15,7 +14,8 @@ func SetupDashboardRoutes(
 ) {
 	api := r.Group("/dashboard")
 	api.Use(middleware.AuthMiddleware(jwtSecret))
-	api.Use(middleware.RequireRoles(entities.RoleSuperAdmin, entities.RoleLocalAdmin))
+	// Todos los roles autenticados pueden acceder; el aislamiento de datos
+	// se maneja en cada UseCase según el rol del usuario.
 	{
 		api.GET("/kpis", ctrl.HandleKPIs)
 		api.GET("/trend", ctrl.HandleTrend)

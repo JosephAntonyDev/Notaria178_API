@@ -44,6 +44,36 @@ func (repo *PostgresWorkRepository) GetCollaborators(ctx context.Context, workID
 	return collabs, nil
 }
 
+func (repo *PostgresWorkRepository) GetUsersToNotifyForWork(ctx context.Context, workID uuid.UUID) ([]entities.WorkCollaboratorInfo, error) {
+	query := `
+		SELECT DISTINCT u.id, u.full_name
+		FROM users u
+		WHERE u.id IN (
+			SELECT user_id FROM work_collaborators WHERE work_id = $1
+			UNION
+			SELECT main_drafter_id FROM works WHERE id = $1 AND main_drafter_id IS NOT NULL
+			UNION
+			SELECT id FROM users WHERE role = 'SUPER_ADMIN'
+		)
+		ORDER BY u.full_name ASC
+	`
+	rows, err := repo.db.QueryContext(ctx, query, workID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	users := make([]entities.WorkCollaboratorInfo, 0)
+	for rows.Next() {
+		var c entities.WorkCollaboratorInfo
+		if err := rows.Scan(&c.UserID, &c.FullName); err != nil {
+			return nil, err
+		}
+		users = append(users, c)
+	}
+	return users, nil
+}
+
 func (repo *PostgresWorkRepository) IsCollaborator(ctx context.Context, workID uuid.UUID, userID uuid.UUID) (bool, error) {
 	query := `SELECT EXISTS(SELECT 1 FROM work_collaborators WHERE work_id = $1 AND user_id = $2)`
 	var exists bool

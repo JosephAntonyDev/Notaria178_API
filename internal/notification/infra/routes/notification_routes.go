@@ -13,6 +13,8 @@ func SetupNotificationRoutes(
 	markAsReadCtrl *controllers.MarkAsReadController,
 	markAllReadCtrl *controllers.MarkAllReadController,
 	sseCtrl *controllers.StreamNotificationsController,
+	registerDeviceTokenCtrl *controllers.RegisterDeviceTokenController,
+	getUnreadCountCtrl *controllers.GetUnreadCountController,
 	jwtSecret string,
 ) {
 	api := r.Group("/notifications")
@@ -20,7 +22,9 @@ func SetupNotificationRoutes(
 	{
 		api.GET("", getMyNotificationsCtrl.Handle)
 		api.GET("/stream", sseCtrl.Handle)
+		api.GET("/unread-count", getUnreadCountCtrl.Handle)
 		api.PATCH("/:id/read", markAsReadCtrl.Handle)
 		api.PATCH("/read-all", markAllReadCtrl.Handle)
+		api.PUT("/device-token", registerDeviceTokenCtrl.Handle)
 	}
 }

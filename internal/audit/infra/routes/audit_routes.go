@@ -5,7 +5,6 @@ import (
 
 	"github.com/JosephAntonyDev/Notaria178_API/internal/audit/infra/controllers"
 	"github.com/JosephAntonyDev/Notaria178_API/internal/middleware"
-	"github.com/JosephAntonyDev/Notaria178_API/internal/user/domain/entities"
 )
 
 func SetupAuditRoutes(
@@ -16,7 +15,8 @@ func SetupAuditRoutes(
 ) {
 	api := r.Group("/audit")
 	api.Use(middleware.AuthMiddleware(jwtSecret))
-	api.Use(middleware.RequireRoles(entities.RoleSuperAdmin, entities.RoleLocalAdmin))
+	// Todos los roles autenticados pueden acceder; el aislamiento de datos
+	// se maneja en el controller según el rol del usuario.
 	{
 		api.GET("/search", searchCtrl.Handle)
 		api.GET("/metrics", metricsCtrl.Handle)

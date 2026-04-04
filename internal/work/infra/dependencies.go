@@ -14,7 +14,7 @@ import (
 	"github.com/JosephAntonyDev/Notaria178_API/internal/work/infra/routes"
 )
 
-func SetupDependencies(r *gin.Engine, db *sql.DB, jwtSecret string, audit events.AuditLogger, notifier events.Notifier, cachePort cache.CachePort) {
+func SetupDependencies(r *gin.Engine, db *sql.DB, jwtSecret string, audit events.AuditLogger, notifier events.Notifier, commentNotifier events.CommentNotifier, cachePort cache.CachePort) {
 	workRepo := repository.NewPostgresWorkRepository(db)
 	fileStorage := storage.NewLocalFileStorage()
 
@@ -26,7 +26,7 @@ func SetupDependencies(r *gin.Engine, db *sql.DB, jwtSecret string, audit events
 	updateStatusUC := app.NewUpdateWorkStatusUseCase(workRepo, audit, notifier, cachePort)
 	addCollabUC := app.NewAddCollaboratorUseCase(workRepo, audit)
 	removeCollabUC := app.NewRemoveCollaboratorUseCase(workRepo, audit)
-	addCommentUC := app.NewAddCommentUseCase(workRepo, audit)
+	addCommentUC := app.NewAddCommentUseCase(workRepo, audit, commentNotifier)
 	listCommentsUC := app.NewListCommentsUseCase(workRepo)
 	addWorkActUC := app.NewAddWorkActUseCase(workRepo, audit)
 	removeWorkActUC := app.NewRemoveWorkActUseCase(workRepo, fileStorage, audit)

@@ -29,7 +29,7 @@ func (uc *SearchWorksUseCase) Execute(
 	case "SUPER_ADMIN":
 		// El Notario puede ver todo; si envía BranchID por URL se respeta.
 	case "LOCAL_ADMIN", "DATA_ENTRY":
-		// Forzar aislamiento por sucursal (ignora lo que venga por URL).
+		// Forzar aislamiento por oficina (ignora lo que venga por URL).
 		filters.BranchID = &userBranchID
 	case "DRAFTER":
 		// Forzar aislamiento doble: solo expedientes donde es creador o colaborador.

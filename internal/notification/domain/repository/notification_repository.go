@@ -15,6 +15,7 @@ type NotificationFilters struct {
 
 type NotificationRepository interface {
 	Create(ctx context.Context, notif *entities.Notification) error
+	CreateBatch(ctx context.Context, notifs []*entities.Notification) error // Crear múltiples notificaciones
 	ListByUser(ctx context.Context, userID uuid.UUID, filters NotificationFilters) ([]*entities.Notification, error)
 	MarkAsRead(ctx context.Context, id uuid.UUID, userID uuid.UUID) error
 	MarkAllAsRead(ctx context.Context, userID uuid.UUID) error

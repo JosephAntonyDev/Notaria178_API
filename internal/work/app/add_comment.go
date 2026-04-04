@@ -58,6 +58,14 @@ func (uc *AddCommentUseCase) Execute(ctx context.Context, reqCtx RequestContext,
 		return nil, err
 	}
 
+	// Recuperar el nombre del autor para usarlo en el DTO y notificaciones
+	authorName, errName := uc.repo.GetUserFullNameByID(ctx, userUUID)
+	if errName != nil {
+		fmt.Printf("[WARN] No se pudo obtener el nombre del usuario %s: %v\n", userUUID, errName)
+		authorName = "Usuario"
+	}
+	comment.UserName = authorName
+
 	if uc.audit != nil {
 		details := map[string]interface{}{
 			"message": req.Message,
@@ -71,11 +79,6 @@ func (uc *AddCommentUseCase) Execute(ctx context.Context, reqCtx RequestContext,
 
 	// Disparar notificaciones push + in-app a los colaboradores (en goroutine para no bloquear)
 	if uc.commentNotifier != nil {
-		authorName, _ := uc.repo.GetUserFullNameByID(ctx, userUUID)
-		if authorName == "" {
-			authorName = "Usuario"
-		}
-
 		folio := "Sin folio"
 		if work.Folio != nil {
 			folio = *work.Folio
@@ -92,7 +95,7 @@ func (uc *AddCommentUseCase) Execute(ctx context.Context, reqCtx RequestContext,
 				AuthorName:     authorName,
 			})
 			if err != nil {
-				fmt.Printf("[WARN] Error enviando notificaciones de comentario: %v\n", err)
+				fmt.Printf("[ERROR] Fallo al notificar comentario: %v\n", err)
 			}
 		}()
 	}

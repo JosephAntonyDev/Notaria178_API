@@ -20,6 +20,7 @@ type WorkRepoAdapter struct {
 // CollaboratorGetter es la capacidad minima que necesitamos del work repo.
 type CollaboratorGetter interface {
 	GetCollaborators(ctx context.Context, workID uuid.UUID) ([]entities.WorkCollaboratorInfo, error)
+	GetUsersToNotifyForWork(ctx context.Context, workID uuid.UUID) ([]entities.WorkCollaboratorInfo, error)
 }
 
 func NewWorkRepoAdapter(g CollaboratorGetter) *WorkRepoAdapter {
@@ -29,6 +30,23 @@ func NewWorkRepoAdapter(g CollaboratorGetter) *WorkRepoAdapter {
 // GetCollaborators implementa notifApp.WorkRepository
 func (a *WorkRepoAdapter) GetCollaborators(ctx context.Context, workID uuid.UUID) ([]notifApp.WorkCollaboratorInfo, error) {
 	collabs, err := a.getter.GetCollaborators(ctx, workID)
+	if err != nil {
+		return nil, err
+	}
+
+	result := make([]notifApp.WorkCollaboratorInfo, len(collabs))
+	for i, c := range collabs {
+		result[i] = notifApp.WorkCollaboratorInfo{
+			UserID:   c.UserID,
+			FullName: c.FullName,
+		}
+	}
+	return result, nil
+}
+
+// GetUsersToNotifyForWork implementa notifApp.WorkRepository
+func (a *WorkRepoAdapter) GetUsersToNotifyForWork(ctx context.Context, workID uuid.UUID) ([]notifApp.WorkCollaboratorInfo, error) {
+	collabs, err := a.getter.GetUsersToNotifyForWork(ctx, workID)
 	if err != nil {
 		return nil, err
 	}

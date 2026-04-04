@@ -38,6 +38,7 @@ type WorkRepository interface {
 	AddCollaborator(ctx context.Context, workID uuid.UUID, userID uuid.UUID) error
 	RemoveCollaborator(ctx context.Context, workID uuid.UUID, userID uuid.UUID) error
 	GetCollaborators(ctx context.Context, workID uuid.UUID) ([]entities.WorkCollaboratorInfo, error)
+	GetUsersToNotifyForWork(ctx context.Context, workID uuid.UUID) ([]entities.WorkCollaboratorInfo, error)
 	IsCollaborator(ctx context.Context, workID uuid.UUID, userID uuid.UUID) (bool, error)
 
 	// Comentarios

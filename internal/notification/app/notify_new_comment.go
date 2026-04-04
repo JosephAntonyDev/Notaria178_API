@@ -12,9 +12,9 @@ import (
 	"github.com/google/uuid"
 )
 
-// WorkRepository interface simplificada (solo lo que necesitamos)
 type WorkRepository interface {
 	GetCollaborators(ctx context.Context, workID uuid.UUID) ([]WorkCollaboratorInfo, error)
+	GetUsersToNotifyForWork(ctx context.Context, workID uuid.UUID) ([]WorkCollaboratorInfo, error)
 }
 
 type WorkCollaboratorInfo struct {
@@ -61,22 +61,29 @@ func NewNotifyNewCommentUseCase(
 }
 
 func (uc *NotifyNewCommentUseCase) Execute(ctx context.Context, input NotifyNewCommentInput) error {
-	// 1. Obtener todos los colaboradores del trabajo
-	collaborators, err := uc.workRepo.GetCollaborators(ctx, input.WorkID)
+	fmt.Printf("[DEBUG-NOTIF] Iniciando NotifyNewComment para WorkID: %s, Author: %s\n", input.WorkID, input.CommentAuthor)
+
+	// 1. Obtener todos los usuarios que deben ser notificados (colaboradores + superadmins + proyectista principal)
+	usersToNotify, err := uc.workRepo.GetUsersToNotifyForWork(ctx, input.WorkID)
 	if err != nil {
-		return fmt.Errorf("error obteniendo colaboradores: %w", err)
+		fmt.Printf("[DEBUG-NOTIF] Error GetUsersToNotifyForWork: %v\n", err)
+		return fmt.Errorf("error obteniendo usuarios a notificar: %w", err)
 	}
+	fmt.Printf("[DEBUG-NOTIF] usersToNotify count: %d\n", len(usersToNotify))
 
 	// 2. Filtrar al autor del comentario (no se notifica a sí mismo)
 	var recipientUserIDs []uuid.UUID
-	for _, collab := range collaborators {
-		if collab.UserID != input.CommentAuthor {
-			recipientUserIDs = append(recipientUserIDs, collab.UserID)
+	for _, user := range usersToNotify {
+		if user.UserID != input.CommentAuthor {
+			recipientUserIDs = append(recipientUserIDs, user.UserID)
 		}
 	}
 
+	fmt.Printf("[DEBUG-NOTIF] recipientUserIDs count: %d\n", len(recipientUserIDs))
+
 	// Si no hay destinatarios, no hacer nada
 	if len(recipientUserIDs) == 0 {
+		fmt.Printf("[DEBUG-NOTIF] Abortando: no hay destinatarios\n")
 		return nil
 	}
 
@@ -105,8 +112,16 @@ func (uc *NotifyNewCommentUseCase) Execute(ctx context.Context, input NotifyNewC
 		notifications = append(notifications, notif)
 	}
 
+	fmt.Printf("[DEBUG-NOTIF] Creando batch de %d notificaciones\n", len(notifications))
 	if err := uc.notifRepo.CreateBatch(ctx, notifications); err != nil {
-		return fmt.Errorf("error creando notificaciones in-app: %w", err)
+		fmt.Printf("[DEBUG-NOTIF] Error CreateBatch: %v\n", err)
+		// Fallback: Si CreateBatch falla, intentar crear uno por uno
+		fmt.Printf("[DEBUG-NOTIF] Intentando fallback Create individual...\n")
+		for _, n := range notifications {
+			_ = uc.notifRepo.Create(ctx, n)
+		}
+	} else {
+		fmt.Printf("[DEBUG-NOTIF] CreateBatch exitoso\n")
 	}
 
 	// 5. Enviar notificaciones SSE (en tiempo real para usuarios conectados)

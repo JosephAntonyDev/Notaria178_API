@@ -1,570 +1,445 @@
 # Notaria 178 API
 
-Backend REST API for a Mexican Notary Office management system. Built with Go, following Hexagonal Architecture (Ports & Adapters) and Domain-Driven Design principles.
+Backend REST del sistema privado de gestion notarial de la Notaria 178.
 
----
+Esta API esta construida en Go con Gin, PostgreSQL y una organizacion por modulos con enfoque hexagonal (`domain`, `app`, `infra`). Hoy ya no solo cubre autenticacion, usuarios y expedientes: tambien incluye cache con Redis, comentarios en tiempo real por WebSocket, centro de notificaciones por SSE, push notifications opcionales con Firebase FCM, auditoria, dashboard y manejo de documentos con optimizacion de PDFs.
 
-## Table of Contents
+## Nota de nomenclatura
 
-1. [Architecture Overview](#architecture-overview)
-2. [Technology Stack](#technology-stack)
-3. [Prerequisites](#prerequisites)
-4. [Environment Configuration](#environment-configuration)
-5. [Database Setup](#database-setup)
-6. [Running the Server](#running-the-server)
-7. [Project Structure](#project-structure)
-8. [Modules](#modules)
-9. [API Endpoints](#api-endpoints)
-10. [Authentication and Authorization](#authentication-and-authorization)
-11. [Caching (Redis)](#caching-redis)
-12. [PDF Optimization](#pdf-optimization)
-13. [Real-Time Notifications (SSE)](#real-time-notifications-sse)
-14. [Cross-Module Integration](#cross-module-integration)
-15. [Docker Deployment](#docker-deployment)
-16. [Race Detector](#race-detector)
-17. [End-to-End Tests](#end-to-end-tests)
+En negocio y en la UI el concepto actual es **oficinas**. Sin embargo, por compatibilidad tecnica el backend todavia usa nombres como `branch`, `branches` y `branch_id` en:
 
----
+- tablas SQL
+- endpoints `/branches/*`
+- DTOs y modelos internos
 
-## Architecture Overview
+Cuando en este README veas `branches`, leelo como **oficinas**.
 
-Each bounded context (module) is organized into three layers:
+## Stack actual
 
-```
-module/
-  domain/         -- Entities, repository interfaces (ports), domain events
-  app/            -- Use cases, DTOs, business rules
-  infra/          -- PostgreSQL repositories, Gin controllers, routes, dependency wiring
-```
+- Go `1.25.5`
+- Gin `1.11.0`
+- PostgreSQL
+- Redis opcional para cache
+- JWT para autenticacion
+- BCrypt para hashing
+- Gorilla WebSocket para comentarios en vivo
+- SSE para notificaciones en tiempo real
+- Firebase Admin SDK para push notifications opcionales
+- pdfcpu para optimizacion de PDFs
+- Docker Compose para levantar DB + Redis + API
 
-- **Domain Layer**: Pure Go, zero framework imports. Defines entities and repository interfaces.
-- **Application Layer**: Orchestrates business logic through use cases. Consumes domain ports.
-- **Infrastructure Layer**: Implements ports with concrete adapters (PostgreSQL, Redis, BCrypt, JWT, SSE).
+## Variables de entorno
 
-Cross-module communication is achieved exclusively through domain-level interfaces and adapter bridges located in `internal/integration/adapters/`. No module imports another module's domain directly.
-
----
-
-## Technology Stack
-
-| Component          | Technology                       |
-|--------------------|----------------------------------|
-| Language           | Go 1.25.5                        |
-| HTTP Framework     | Gin v1.11.0                      |
-| Database           | PostgreSQL (lib/pq v1.11.2)      |
-| Cache              | Redis (go-redis/v9 v9.18.0)      |
-| Authentication     | JWT (golang-jwt/v4)              |
-| Password Hashing   | BCrypt (golang.org/x/crypto)     |
-| CORS               | gin-contrib/cors                 |
-| PDF Optimization  | pdfcpu v0.11.1                   |
-| UUID               | google/uuid v1.6.0               |
-| Environment        | godotenv v1.5.1                  |
-
----
-
-## Prerequisites
-
-- Go 1.25.5 or higher
-- PostgreSQL 14 or higher
-- Redis 7 or higher (optional, the server starts without it)
-- Git
-
----
-
-## Environment Configuration
-
-Create a `.env` file in the project root:
+El proyecto usa `.env`. El nombre real de la variable de conexion es **`DB_URL`**, no `DATABASE_URL`.
 
 ```env
-# Required
-JWT_SECRET=your_secure_jwt_secret
-DATABASE_URL=postgres://user:password@localhost:5432/notaria178_db?sslmode=disable
-
-# Optional
 PORT=8080
+DB_URL=postgres://usuario:password@localhost:5432/notaria178_db?sslmode=disable
+JWT_SECRET=tu_secreto_jwt
+
 REDIS_ADDR=localhost:6379
 REDIS_PASSWORD=
 REDIS_DB=0
+
+FIREBASE_CREDENTIALS_PATH=./ruta_a_tu_service_account.json
 ```
 
-| Variable         | Required | Description                                    |
-|------------------|----------|------------------------------------------------|
-| `JWT_SECRET`     | Yes      | Secret key for JWT token signing               |
-| `DATABASE_URL`   | Yes      | PostgreSQL connection string                   |
-| `PORT`           | No       | HTTP server port (default: 8080)               |
-| `REDIS_ADDR`     | No       | Redis address (host:port). If empty, no cache  |
-| `REDIS_PASSWORD` | No       | Redis password (empty for no auth)             |
-| `REDIS_DB`       | No       | Redis database index (default: 0)              |
+### Variables usadas hoy
 
----
+| Variable | Obligatoria | Uso |
+| --- | --- | --- |
+| `PORT` | No | Puerto HTTP. Default: `8080`. |
+| `DB_URL` | Si | Conexion a PostgreSQL. |
+| `JWT_SECRET` | Si | Firma y validacion de JWT. |
+| `REDIS_ADDR` | No | Activa cache Redis si existe. |
+| `REDIS_PASSWORD` | No | Password de Redis. |
+| `REDIS_DB` | No | Indice de DB en Redis. |
+| `FIREBASE_CREDENTIALS_PATH` | No | Habilita push notifications FCM si apunta a un service account valido. |
 
-## Database Setup
+## Como correrlo
 
-Execute the schema against your PostgreSQL instance:
-
-```bash
-psql -U your_user -f schema.sql
-```
-
-The schema creates:
-- Enums: `user_role`, `user_status`, `work_status`, `document_category`, `notification_type`
-- 13 tables: `branches`, `users`, `attendances`, `clients`, `act_catalogs`, `act_requirements`, `works`, `work_acts`, `work_collaborators`, `documents`, `work_comments`, `notifications`, `audit_logs`
-
----
-
-## Running the Server
+### Local
 
 ```bash
-# Install dependencies
 go mod tidy
-
-# Run
 go run .
-
-# Or build and run
-go build -o notaria178 .
-./notaria178
 ```
 
-The server starts at `http://localhost:8080` (or the port defined in `PORT`).
+La API levanta en `http://localhost:8080` salvo que cambies `PORT`.
 
----
-
-## Project Structure
-
-```
-Notaria178_API/
-  main.go                          -- Entry point and dependency wiring
-  go.mod / go.sum                  -- Go module definition
-  schema.sql                       -- PostgreSQL DDL
-  Dockerfile                       -- Multi-stage build (Alpine)
-  docker-compose.yml               -- Full stack: PostgreSQL + Redis + API
-  run_with_race_detector.sh        -- Race detector script (Linux/macOS)
-  run_with_race_detector.bat       -- Race detector script (Windows)
-  tests/
-    e2e/                           -- Python end-to-end tests
-  internal/
-    core/
-      postgresql.go                -- DB pool (10 open, 5 idle connections)
-      cors.go                      -- CORS middleware configuration
-      cache/
-        redis_adapter.go           -- CachePort interface + Redis implementation
-      dtos/
-        pagination.go              -- PaginationRequest, DateRangeRequest, PaginatedResponse
-    middleware/
-      auth.go                      -- JWT extraction + role-based authorization
-    integration/
-      adapters/
-        audit_adapter.go           -- AuditLogger port -> audit use case
-        notification_adapter.go    -- Notifier port -> notification use case
-    user/                          -- User management, login, profiles
-    attendance/                    -- Employee check-in/check-out
-    act/                           -- Act catalog management (cached)
-    client/                        -- Client registry
-    branch/                        -- Branch/office management
-    work/                          -- Work dossiers (expedientes), status machine
-    document/                      -- File upload/download with OS-aware storage
-    notification/                  -- Notifications + SSE real-time streaming
-    audit/                         -- Audit log recording and search
-    dashboard/                     -- Analytics dashboard (cached aggregations)
-```
-
----
-
-## Modules
-
-### User
-Employee and admin management. Handles registration, login (JWT), profile viewing and editing.
-
-### Attendance
-Clock-in/clock-out system for employees. Supports multiple shifts per day.
-
-### Act (Cached)
-Catalog of notarial act types (e.g., Sale, Power of Attorney). Features Redis cache — search results are cached for 24 hours with automatic invalidation on create, update, status toggle, or delete.
-
-Each act contains a **requirements checklist** (sub-resources) that define what documents or steps are needed to process that act type. Requirements support **safe-delete logic**: if the parent act has linked works (`works_count > 0`), requirements are soft-deleted (status set to `INACTIVE`) instead of physically removed, protecting historical data integrity. Acts themselves follow the same pattern — orphan acts (no linked works) can be permanently deleted, while acts with linked works can only be deactivated.
-
-### Client
-Registry of notary clients with name, RFC, phone, and email.
-
-### Branch
-Office/branch management. Users are assigned to a branch.
-
-### Work
-Core module. Manages legal dossiers (expedientes) with a status machine:
-`PENDING -> IN_PROGRESS -> READY_FOR_REVIEW -> APPROVED / REJECTED`
-
-Supports collaborators, comments, and cross-module integration with audit logging and notifications on status changes.
-
-### Document
-File uploads tied to works and clients. OS-aware storage paths (Linux/Windows). Supports categories: DRAFT_DEED, FINAL_DEED, CLIENT_REQUIREMENT, OTHER. **PDF files are automatically optimized on upload using lossless compression** (pdfcpu), reducing storage usage without any visible quality loss.
-
-#### Document–Requirement Linking (ID-based Architecture)
-
-Documents of category `CLIENT_REQUIREMENT` are linked to their corresponding requirement via `requirement_id` and `requirement_source`, stored directly in the `documents` table. This replaces the previous name-based matching approach and eliminates issues with filename collisions, renames, and structured naming conventions.
-
-| Column              | Type          | Description                                                    |
-|---------------------|---------------|----------------------------------------------------------------|
-| `requirement_id`    | UUID (nullable) | Points to `act_requirements.id` or `work_requirements.id`   |
-| `requirement_source`| VARCHAR(20)   | `'ACT'` for act catalog requirements, `'WORK'` for ad-hoc     |
-
-**Upload flow:**
-1. Frontend sends `requirement_id` and `requirement_source` alongside the file in `POST /documents/upload`.
-2. Backend stores both fields in the `documents` row.
-3. If `requirement_source = 'WORK'`, the backend also sets `work_requirements.document_id` to the new document ID for direct lookup.
-4. Filenames include a Unix timestamp for uniqueness: `ClientName_ReqName_<timestamp>_original.pdf`.
-
-**Read flow (GetWorkDetail):**
-1. Backend queries `SELECT DISTINCT ON (requirement_id) requirement_id, id FROM documents WHERE work_id = ? AND requirement_id IS NOT NULL ORDER BY requirement_id, created_at DESC` to get the latest document per requirement.
-2. For deduplicated (act) requirements: checks if **any** contributing `act_requirements.id` matches a key in the document map.
-3. For work requirements: checks by `work_requirements.id` directly.
-
-**Cascade delete:**
-- Removing an ad-hoc work requirement: deletes documents where `requirement_id = work_requirement_id`.
-- Removing an act: computes orphaned requirement names (not shared by remaining acts), resolves all matching `act_requirements.id` values, then deletes documents where `requirement_id IN (orphaned_ids)`.
-
-**Download:**
-Uses `c.FileAttachment(filePath, documentName)` to set `Content-Disposition` with the human-readable document name, regardless of the internal file path.
-
-### Notification
-User notifications with real-time delivery via Server-Sent Events (SSE). Types: NEW_COMMENT, ASSIGNMENT, STATUS_CHANGE, SYSTEM.
-
-### Audit
-Immutable audit trail. Records user, action, entity, entity ID, and JSONB details (before/after snapshots). Search endpoint restricted to admin roles.
-
-### Dashboard (Cached)
-Analytics module that powers the control panel. Provides 6 aggregation endpoints for KPIs, trends, status distribution, recent activity, top drafters, and most common act types. All queries use optimized PostgreSQL aggregations (`COUNT FILTER`, `date_trunc`, `GROUP BY`) and are cached in Redis with a 5-minute TTL (3 minutes for activity). Restricted to SUPER_ADMIN and LOCAL_ADMIN roles.
-
----
-
-## API Endpoints
-
-### User `/users`
-
-| Method | Path                       | Description         | Auth          |
-|--------|----------------------------|---------------------|---------------|
-| POST   | `/users/login`      | Login (returns JWT) | Public        |
-| GET    | `/users/profile`    | Get own profile     | Authenticated |
-| PATCH  | `/users/profile`    | Update own profile  | Authenticated |
-| POST   | `/users/create`     | Create employee     | Admin         |
-| PATCH  | `/users/update/:id` | Update employee     | Admin         |
-| GET    | `/users/search`     | Search employees    | Admin         |
-
-### Attendance `/attendance`
-
-| Method | Path                                  | Description              | Auth          |
-|--------|---------------------------------------|--------------------------|---------------|
-| POST   | `/attendance/check`            | Clock in / clock out     | Authenticated |
-| GET    | `/attendance/history`          | Own attendance history   | Authenticated |
-| GET    | `/attendance/admin/history/:id`| Employee attendance      | Admin         |
-
-### Act `/acts`
-
-| Method | Path                               | Description                    | Auth          |
-|--------|-------------------------------------|--------------------------------|---------------|
-| GET    | `/acts/search`              | Search acts (cached)           | Authenticated |
-| GET    | `/acts/:id/requirements`    | List requirements for an act   | Authenticated |
-| POST   | `/acts/create`              | Create act                     | Admin         |
-| PATCH  | `/acts/update/:id`          | Update act                     | Admin         |
-| PATCH  | `/acts/status/:id`          | Toggle act status              | Admin         |
-| DELETE | `/acts/:id`                 | Delete act (safe-delete)       | Admin         |
-| POST   | `/acts/:id/requirements`    | Add requirement to act         | Admin         |
-| DELETE | `/acts/:id/requirements/:req_id` | Delete/deactivate requirement | Admin         |
-
-### Client `/clients`
-
-| Method | Path                          | Description      | Auth          |
-|--------|-------------------------------|------------------|---------------|
-| GET    | `/clients/search`      | Search clients   | Authenticated |
-| POST   | `/clients/create`      | Create client    | Authenticated |
-| PATCH  | `/clients/update/:id`  | Update client    | Authenticated |
-
-### Branch `/branches`
-
-| Method | Path                           | Description      | Auth          |
-|--------|--------------------------------|------------------|---------------|
-| GET    | `/branches/search`      | Search branches  | Authenticated |
-| POST   | `/branches/create`      | Create branch    | Admin         |
-| PATCH  | `/branches/update/:id`  | Update branch    | Admin         |
-
-### Work `/works`
-
-| Method | Path                                          | Description           | Auth          |
-|--------|-----------------------------------------------|-----------------------|---------------|
-| GET    | `/works/search`                        | Search works          | Authenticated |
-| GET    | `/works/:id`                           | Get work detail       | Authenticated |
-| POST   | `/works/create`                        | Create work           | Managers      |
-| PATCH  | `/works/update/:id`                    | Update work           | Managers      |
-| PATCH  | `/works/status/:id`                    | Update work status    | Managers      |
-| GET    | `/works/:id/comments`                  | List work comments    | Authenticated |
-| POST   | `/works/:id/comments`                  | Add comment           | Authenticated |
-| POST   | `/works/:id/collaborators`             | Add collaborator      | Managers      |
-| DELETE | `/works/:id/collaborators/:userId`     | Remove collaborator   | Managers      |
-
-### Document `/documents`
-
-| Method | Path                                   | Description          | Auth          |
-|--------|----------------------------------------|----------------------|---------------|
-| POST   | `/documents/upload`             | Upload document      | Authenticated |
-| GET    | `/documents/work/:work_id`      | List work documents  | Authenticated |
-| GET    | `/documents/download/:id`       | Download document    | Authenticated |
-
-### Notification `/notifications`
-
-| Method | Path                                   | Description               | Auth          |
-|--------|-----------------------------------------|--------------------------|---------------|
-| GET    | `/notifications`                | List my notifications     | Authenticated |
-| GET    | `/notifications/stream`         | SSE real-time stream      | Authenticated |
-| PATCH  | `/notifications/:id/read`       | Mark as read              | Authenticated |
-| PATCH  | `/notifications/read-all`       | Mark all as read          | Authenticated |
-
-### Audit `/audit`
-
-| Method | Path                       | Description          | Auth  |
-|--------|----------------------------|----------------------|-------|
-| GET    | `/audit/search`     | Search audit logs    | Admin |
-
-### Dashboard `/dashboard`
-
-All dashboard endpoints accept these common query parameters:
-
-| Param | Type | Default | Description |
-|---|---|---|---|
-| `timeframe` | string | `month` | `today`, `week`, `month`, `3months`, `6months`, `9months`, `year`, `all` |
-| `branch_id` | UUID | all | Filter by specific branch |
-| `start_date` | string | — | Manual start date (YYYY-MM-DD), overrides `timeframe` |
-| `end_date` | string | — | Manual end date (YYYY-MM-DD), overrides `timeframe` |
-
-| Method | Path | Description | Extra Params | Auth |
-|--------|------|-------------|--------------|------|
-| GET | `/dashboard/kpis` | Work counts by status | — | Admin |
-| GET | `/dashboard/trend` | Created vs approved over time | `group_by` (day/week/month) | Admin |
-| GET | `/dashboard/distribution` | Status distribution (donut chart) | — | Admin |
-| GET | `/dashboard/activity` | Recent audit activity with user names | `user_id`, `entity_id`, `limit`, `offset` | Admin |
-| GET | `/dashboard/top-drafters` | Most active drafters by work count | `limit` | Admin |
-| GET | `/dashboard/top-acts` | Most common act types | `limit` | Admin |
-
-**Total: 41 endpoints (1 public, 40 protected)**
-
----
-
-## Authentication and Authorization
-
-All protected endpoints require a `Bearer` token in the `Authorization` header:
-
-```
-Authorization: Bearer <jwt_token>
-```
-
-The JWT payload contains `userID`, `userRole`, and `branchID`, which are extracted by the auth middleware and injected into the Gin context.
-
-### Roles
-
-| Role          | Description                                     |
-|---------------|-------------------------------------------------|
-| SUPER_ADMIN   | Full system access across all branches           |
-| LOCAL_ADMIN   | Full access within their assigned branch         |
-| DRAFTER       | Can manage works, documents, and comments        |
-| DATA_ENTRY    | Basic data input capabilities                    |
-
-Role checks are enforced at the route level using `middleware.RequireRoles(...)`.
-
----
-
-## Caching (Redis)
-
-Redis is an **optional** dependency. If `REDIS_ADDR` is not set or Redis is unreachable, the server starts normally and all queries go directly to PostgreSQL.
-
-### Cache Architecture
-
-The cache layer follows the Ports & Adapters pattern:
-
-- **Port**: `cache.CachePort` interface (Set, Get, Invalidate, InvalidatePrefix)
-- **Adapter**: `cache.RedisCache` using go-redis/v9
-
-### Cache Strategy: Act Module
-
-| Operation      | Behavior                                                    |
-|----------------|-------------------------------------------------------------|
-| Search acts    | Check Redis first (key: `acts:search:<hash>`). On miss, query DB and cache result with 24h TTL. |
-| Create act     | Invalidate all keys with prefix `acts:search:`.             |
-| Update act     | Invalidate all keys with prefix `acts:search:`.             |
-| Toggle status  | Invalidate all keys with prefix `acts:search:`.             |
-| Delete act     | Invalidate all keys with prefix `acts:search:`.             |
-| Add requirement | Invalidate all keys with prefix `acts:search:`.            |
-| Delete/deactivate requirement | Invalidate all keys with prefix `acts:search:`. |
-
-### Cache Strategy: Dashboard Module
-
-All 6 dashboard endpoints use the Cache-Aside pattern with deterministic keys:
-
-| Endpoint | Cache Key Pattern | TTL |
-|---|---|---|
-| KPIs | `dashboard:kpis:{branch}:{start}:{end}` | 5 min |
-| Trend | `dashboard:trend:{branch}:{start}:{end}:{group_by}` | 5 min |
-| Distribution | `dashboard:dist:{branch}:{start}:{end}` | 5 min |
-| Activity | `dashboard:activity:{branch}:{user}:{entity}:{start}:{end}:{limit}:{offset}` | 3 min |
-| Top Drafters | `dashboard:topdrafters:{branch}:{start}:{end}:{limit}` | 5 min |
-| Top Acts | `dashboard:topacts:{branch}:{start}:{end}:{limit}` | 5 min |
-
-All Redis errors are handled gracefully — on failure, the operation falls back to the database without interrupting the request.
-
----
-
-## PDF Optimization
-
-PDF files uploaded via the document module are automatically optimized using **pdfcpu** (lossless compression). This reduces storage consumption without any visible quality loss.
-
-### How It Works
-
-1. User uploads a document via `POST /documents/upload`.
-2. The file is saved to disk.
-3. If the file extension is `.pdf`, the storage layer applies `pdfcpu.Optimize`:
-   - Removes duplicate and unused objects.
-   - Optimizes cross-reference tables and object streams.
-   - Deflates stream data where possible.
-4. If the optimized file is **smaller**, it replaces the original. Otherwise, the original is kept.
-5. The operation is transparent — the upload succeeds regardless of optimization outcome.
-
-### Characteristics
-
-| Property             | Value                                                     |
-|----------------------|-----------------------------------------------------------|
-| Library              | pdfcpu v0.11.1 (pure Go, no external dependencies)        |
-| Compression type     | Lossless — zero visible quality loss                       |
-| Typical reduction    | 10–40% for PDFs from office software, scanners, or tools  |
-| Failure handling     | Graceful — errors are logged, upload is never blocked      |
-| Non-PDF files        | Skipped automatically                                      |
-
-### Architecture
-
-The compression logic lives entirely in the infrastructure layer (`document/infra/storage/pdf_compressor.go`), consistent with Hexagonal Architecture. The domain and application layers have no knowledge of compression — it is an infrastructure-level optimization.
-
----
-
-## Real-Time Notifications (SSE)
-
-The notification module includes a Server-Sent Events hub for real-time delivery:
-
-1. Client connects to `GET /notifications/stream` with a valid JWT.
-2. The SSEHub registers the client channel keyed by user ID.
-3. When a notification is created (e.g., from a work status change), `CreateNotificationUseCase` calls `Broadcast()`.
-4. The SSEHub pushes the event to the connected client's channel.
-5. On disconnect, the client channel is removed and closed.
-
-The SSEHub uses `sync.RWMutex` for concurrent access safety and buffered channels with non-blocking sends to prevent slow clients from blocking the hub.
-
----
-
-## Cross-Module Integration
-
-The `work` module triggers audit logs and notifications when a work status changes. This is achieved without circular imports:
-
-```
-work/domain/events/
-  external_ports.go       -- Defines AuditLogger and Notifier interfaces
-
-internal/integration/adapters/
-  audit_adapter.go        -- Bridges AuditLogger to audit.LogActionUseCase
-  notification_adapter.go -- Bridges Notifier to notification.CreateNotificationUseCase
-```
-
-Adapters are created in `main.go` and injected into the work module at startup.
-
----
-
-## Docker Deployment
-
-The entire stack (PostgreSQL, Redis, API) can be launched with a single command using Docker Compose.
-
-### Prerequisites
-
-- [Docker](https://docs.docker.com/get-docker/) and [Docker Compose](https://docs.docker.com/compose/install/) installed.
-
-### Start the stack
+### Docker
 
 ```bash
 docker compose up -d --build
 ```
 
-This will:
-1. Build the Go API image using a multi-stage Dockerfile (Alpine-based, non-root user).
-2. Start a **PostgreSQL 18** container and automatically run `schema.sql` on first boot.
-3. Start a **Redis 7** container.
-4. Start the **API** container on port `8080`, waiting for healthy DB and Redis.
+Servicios incluidos:
 
-### Stop the stack
+- `db` con `postgres:18-alpine`
+- `redis` con `redis:7-alpine`
+- `api` con la aplicacion Go
 
-```bash
-docker compose down
+El `docker-compose.yml` ya monta:
+
+- `./schema.sql` como init script de PostgreSQL
+- `./uploads` para persistir archivos
+- `./notaria178-firebase-admin.json` como credencial de Firebase dentro del contenedor
+
+## Estructura actual
+
+```text
+Notaria178_API/
+  main.go
+  schema.sql
+  docker-compose.yml
+  Dockerfile
+  cmd/
+    migrator/
+  internal/
+    act/
+    attendance/
+    audit/
+    branch/
+    client/
+    core/
+      cache/
+      dtos/
+    dashboard/
+    document/
+    integration/
+      adapters/
+    messaging/
+    middleware/
+    notification/
+    user/
+    work/
+  tests/
+    e2e/
+  uploads/
 ```
 
-To also remove the persisted database volume:
+### Convencion por modulo
 
-```bash
-docker compose down -v
+Cada modulo sigue esta forma:
+
+```text
+module/
+  domain/   # entidades, puertos, reglas puras
+  app/      # casos de uso
+  infra/    # repositorios, controladores, rutas, adapters
 ```
 
-### Verify services
+## Modulos que existen hoy
+
+### `user`
+
+- login JWT
+- perfil propio
+- creacion y edicion de personal
+- busqueda de usuarios
+
+### `attendance`
+
+- check-in / check-out
+- historial propio
+- consulta administrativa de asistencias
+
+### `act`
+
+- catalogo de actos
+- categorias
+- requisitos por acto
+- soft delete / desactivacion cuando hay dependencias historicas
+- cache Redis para busquedas
+
+### `client`
+
+- busqueda, alta y edicion de clientes
+
+### `branch`
+
+- catalogo tecnico de oficinas (`branches`)
+- usado por filtros, asignaciones y dashboard
+
+### `work`
+
+Es el modulo central del sistema:
+
+- crear y editar expedientes
+- cambiar estado del trabajo
+- asociar y quitar actos
+- agregar y quitar colaboradores
+- comentarios por expediente
+- requisitos ad-hoc por expediente
+- detalle completo del expediente
+
+Estados manejados:
+
+`PENDING -> IN_PROGRESS -> READY_FOR_REVIEW -> APPROVED / REJECTED`
+
+### `document`
+
+- subida de documentos
+- listado por expediente
+- descarga autenticada
+- borrado de documentos
+- soporte para documentos ligados a requisitos por `requirement_id` + `requirement_source`
+- optimizacion automatica de PDFs con `pdfcpu`
+
+### `notification`
+
+- listado de notificaciones del usuario
+- contador de no leidas
+- marcar una o todas como leidas
+- SSE en `/notifications/stream`
+- registro de `device_token` para push
+- integracion opcional con Firebase FCM
+
+### `messaging`
+
+- chat en vivo de comentarios de expedientes por WebSocket
+- endpoint `/ws/comments`
+- rooms por `work_id`
+- reutiliza los mismos casos de uso de comentarios del modulo `work`
+
+### `audit`
+
+- busqueda de auditoria
+- metricas de auditoria
+- registro de acciones desde otros modulos via adapters
+
+### `dashboard`
+
+Agregaciones para panel administrativo:
+
+- KPIs
+- tendencia
+- distribucion por estado
+- actividad reciente
+- top proyectistas
+- top actos
+
+Redis se usa aqui como cache opcional.
+
+## Integraciones en tiempo real
+
+Hoy existen dos canales distintos:
+
+### SSE para notificaciones
+
+- endpoint: `GET /notifications/stream`
+- sirve para centro de notificaciones en tiempo real
+
+### WebSocket para comentarios
+
+- endpoint: `GET /ws/comments`
+- se usa para entrar/salir de rooms por expediente y enviar comentarios en vivo
+
+### Push notifications opcionales
+
+Si `FIREBASE_CREDENTIALS_PATH` esta configurado y la credencial es valida:
+
+- se registran tokens de dispositivo en `user_device_tokens`
+- se pueden enviar push notifications de comentarios y eventos
+
+Si Firebase no esta configurado, el sistema sigue funcionando con notificaciones in-app + SSE.
+
+## Base de datos actual
+
+`schema.sql` ya contempla, entre otras, estas tablas:
+
+- `branches`
+- `users`
+- `attendances`
+- `clients`
+- `act_catalogs`
+- `act_requirements`
+- `works`
+- `work_acts`
+- `work_collaborators`
+- `documents`
+- `work_comments`
+- `user_device_tokens`
+- `notifications`
+- `audit_logs`
+
+Tambien incluye seed inicial de oficinas, usuario `SUPER_ADMIN`, proyectistas y catalogo base de actos/requisitos.
+
+## Resumen de endpoints
+
+Hoy el backend expone **55 endpoints/rutas** en total:
+
+- `users`: login, perfil, creacion, actualizacion y busqueda
+- `attendance`: check, historial propio e historial admin
+- `acts`: CRUD del catalogo y requisitos
+- `clients`: buscar, crear y actualizar
+- `branches`: buscar, crear y actualizar oficinas
+- `works`: busqueda, detalle, estados, comentarios, colaboradores, actos y requisitos
+- `documents`: subir, listar, descargar y borrar
+- `notifications`: listado, SSE, unread count, read, read-all y registro de device token
+- `audit`: search y metrics
+- `dashboard`: kpis, trend, distribution, activity, top-drafters y top-acts
+- `ws/comments`: chat en vivo de comentarios
+
+## Endpoints por modulo
+
+### Users
+
+- `POST /users/login`
+- `GET /users/profile`
+- `PATCH /users/profile`
+- `POST /users/create`
+- `PATCH /users/update/:id`
+- `GET /users/search`
+
+### Attendance
+
+- `POST /attendance/check`
+- `GET /attendance/history`
+- `GET /attendance/admin/history/:id`
+
+### Acts
+
+- `GET /acts/search`
+- `GET /acts/:id/requirements`
+- `POST /acts/create`
+- `PATCH /acts/update/:id`
+- `PATCH /acts/status/:id`
+- `DELETE /acts/:id`
+- `POST /acts/:id/requirements`
+- `DELETE /acts/:id/requirements/:req_id`
+
+### Clients
+
+- `GET /clients/search`
+- `POST /clients/create`
+- `PATCH /clients/update/:id`
+
+### Offices (`branches`)
+
+- `GET /branches/search`
+- `POST /branches/create`
+- `PATCH /branches/update/:id`
+
+### Works
+
+- `GET /works/search`
+- `GET /works/:id`
+- `POST /works/create`
+- `PATCH /works/update/:id`
+- `PATCH /works/status/:id`
+- `GET /works/:id/comments`
+- `POST /works/:id/comments`
+- `POST /works/:id/collaborators`
+- `DELETE /works/:id/collaborators/:userId`
+- `POST /works/:id/acts`
+- `DELETE /works/:id/acts/:actId`
+- `POST /works/:id/requirements`
+- `DELETE /works/:id/requirements/:reqId`
+
+### Documents
+
+- `POST /documents/upload`
+- `GET /documents/work/:work_id`
+- `GET /documents/download/:id`
+- `DELETE /documents/:id`
+
+### Notifications
+
+- `GET /notifications`
+- `GET /notifications/stream`
+- `GET /notifications/unread-count`
+- `PATCH /notifications/:id/read`
+- `PATCH /notifications/read-all`
+- `PUT /notifications/device-token`
+
+### Audit
+
+- `GET /audit/search`
+- `GET /audit/metrics`
+
+### Dashboard
+
+- `GET /dashboard/kpis`
+- `GET /dashboard/trend`
+- `GET /dashboard/distribution`
+- `GET /dashboard/activity`
+- `GET /dashboard/top-drafters`
+- `GET /dashboard/top-acts`
+
+### Messaging
+
+- `GET /ws/comments`
+
+## Cache actual
+
+Redis es opcional.
+
+Si `REDIS_ADDR` no existe o Redis falla:
+
+- la API sigue levantando
+- actos y dashboard responden directo desde PostgreSQL
+
+Hoy el cache se usa principalmente en:
+
+- busquedas del modulo de actos
+- agregaciones del dashboard
+
+## Documentos y requisitos
+
+La relacion actual ya es por IDs, no por nombre de archivo.
+
+Campos relevantes en `documents`:
+
+- `requirement_id`
+- `requirement_source` con valores `ACT` o `WORK`
+
+Esto permite:
+
+- ligar archivos a requisitos de catalogo
+- ligar archivos a requisitos ad-hoc del expediente
+- reemplazar documentos sin depender de nombres "magicos"
+
+## Calidad y soporte
+
+### Race detector
 
 ```bash
-docker compose ps
-docker compose logs api
-```
-
-### Docker Architecture
-
-| Service | Image | Port | Health Check |
-|---------|-------|------|--------------|
-| `db` | postgres:18-alpine | 5432 | `pg_isready` |
-| `redis` | redis:7-alpine | 6379 | `redis-cli ping` |
-| `api` | Custom (multi-stage Go build) | 8080 | Depends on db + redis |
-
-The API container runs as a non-root user (`appuser`) for security. Uploaded files are persisted via a volume mount to `./uploads`.
-
----
-
-## Race Detector
-
-Go's built-in race detector can be used to verify concurrent safety (particularly for the SSE hub):
-
-**Linux / macOS:**
-```bash
-chmod +x run_with_race_detector.sh
 ./run_with_race_detector.sh
 ```
 
-**Windows:**
+o en Windows:
+
 ```cmd
 run_with_race_detector.bat
 ```
 
-These scripts compile and run the binary with `-race` enabled. Any data race will be reported to stderr at runtime.
-
----
-
-## End-to-End Tests
-
-A Python-based E2E test suite validates the complete API flow.
-
-### Setup
+### E2E
 
 ```bash
 pip install -r requirements-qa.txt
-```
-
-### Run
-
-```bash
 pytest tests/e2e/ -v
 ```
 
-### Features
+La suite actual vive en `tests/e2e/`.
 
-- 6 ordered tests covering login, CRUD, and cross-module flows
-- Automatic PDF report generation (via conftest.py hook)
-- Results saved to `tests/e2e/` directory
+### Migraciones auxiliares
 
----
+Existen archivos de apoyo historicos:
 
----
+- `migrate_acts.sql`
+- `migrate_epic.sql`
+- `cmd/migrator/main.go`
+
+`cmd/migrator` es un helper local y hoy tiene una conexion hardcodeada para ejecutar `migrate_acts.sql`, asi que no reemplaza una herramienta formal de migraciones.
+
+## Relacion con el frontend
+
+Este backend sirve a `notaria178_frontend`.
+
+Puntos importantes de integracion actuales:
+
+- REST en `http://localhost:8080`
+- SSE para notificaciones
+- WebSocket en `ws://localhost:8080/ws/comments`
+- Firebase FCM para push opcional

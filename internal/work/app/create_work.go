@@ -25,12 +25,12 @@ func NewCreateWorkUseCase(r repository.WorkRepository, cp cache.CachePort, audit
 func (uc *CreateWorkUseCase) Execute(ctx context.Context, reqCtx RequestContext, req CreateWorkRequest) (*WorkDetailDTO, error) {
 	branchID, err := uuid.Parse(req.BranchID)
 	if err != nil {
-		return nil, errors.New("ID de sucursal inválido")
+		return nil, errors.New("ID de oficina inválido")
 	}
 
 	if reqCtx.UserRole != "SUPER_ADMIN" {
 		if reqCtx.BranchID != req.BranchID {
-			return nil, errors.New("no puedes crear trabajos en una sucursal que no es la tuya")
+			return nil, errors.New("no puedes crear trabajos en una oficina que no es la tuya")
 		}
 	}
 

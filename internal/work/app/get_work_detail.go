@@ -36,7 +36,7 @@ func (uc *GetWorkDetailUseCase) Execute(ctx context.Context, reqCtx RequestConte
 	userUUID, _ := uuid.Parse(reqCtx.UserID)
 	isCollab, _ := uc.repo.IsCollaborator(ctx, work.ID, userUUID)
 
-	if !canAccessWork(work, reqCtx, isCollab) {
+	if !CanAccessWork(work, reqCtx, isCollab) {
 		return nil, errors.New("no tienes acceso a este trabajo")
 	}
 

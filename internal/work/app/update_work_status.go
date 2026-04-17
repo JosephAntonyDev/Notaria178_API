@@ -41,7 +41,7 @@ func (uc *UpdateWorkStatusUseCase) Execute(ctx context.Context, reqCtx RequestCo
 	userUUID, _ := uuid.Parse(reqCtx.UserID)
 	isCollab, _ := uc.repo.IsCollaborator(ctx, work.ID, userUUID)
 
-	if !canAccessWork(work, reqCtx, isCollab) {
+	if !CanAccessWork(work, reqCtx, isCollab) {
 		return nil, errors.New("no tienes acceso a este trabajo")
 	}
 
@@ -70,10 +70,24 @@ func (uc *UpdateWorkStatusUseCase) Execute(ctx context.Context, reqCtx RequestCo
 		_ = uc.audit.LogAction(ctx, "STATUS_CHANGE", "WORK", work.ID, &userUUID, details)
 	}
 
-	// Notificación al proyectista principal
-	if uc.notifier != nil && work.MainDrafterID != nil {
-		msg := fmt.Sprintf("El expediente %s cambió de %s a %s", work.ID.String(), oldStatus, string(newStatus))
-		_ = uc.notifier.SendNotification(ctx, *work.MainDrafterID, &work.ID, "STATUS_CHANGE", msg)
+	// Notificación
+	if uc.notifier != nil {
+		folioLabel := "Sin folio"
+		if work.Folio != nil && *work.Folio != "" {
+			folioLabel = *work.Folio
+		}
+		
+		msg := fmt.Sprintf("El expediente %s cambió de %s a %s", folioLabel, statusLabel(oldStatus), statusLabel(string(newStatus)))
+		
+		// Siempre notificar al proyectista principal (si existe)
+		if work.MainDrafterID != nil {
+			_ = uc.notifier.SendNotification(ctx, *work.MainDrafterID, &work.ID, "STATUS_CHANGE", msg)
+		}
+		
+		// Adicionalmente, si el estado pasa a READY_FOR_REVIEW, notificar a los notarios
+		if newStatus == entities.StatusReadyForReview {
+			_ = uc.notifier.NotifySuperAdmins(ctx, &work.ID, "STATUS_CHANGE", msg)
+		}
 	}
 
 	// Invalidar caché de KPIs de trabajos en Redis
@@ -130,10 +144,31 @@ func validateStatusTransition(work *entities.Work, reqCtx RequestContext, isColl
 			return nil
 		case current == entities.StatusPending && newStatus == entities.StatusInProgress:
 			return nil
+		case current == entities.StatusPending && newStatus == entities.StatusReadyForReview:
+			return nil
+		case current == entities.StatusRejected && newStatus == entities.StatusInProgress:
+			return nil
+		case current == entities.StatusRejected && newStatus == entities.StatusReadyForReview:
+			return nil
 		default:
 			return errors.New("transición de estado no permitida para tu rol")
 		}
 	}
 
 	return errors.New("no tienes permisos para cambiar el estado de este trabajo")
+}
+
+// statusLabel convierte constantes internas a texto legible.
+func statusLabel(s string) string {
+	labels := map[string]string{
+		"PENDING":          "Pendiente",
+		"IN_PROGRESS":      "En proceso",
+		"READY_FOR_REVIEW": "Listo para revisión",
+		"APPROVED":         "Aprobado",
+		"REJECTED":         "Rechazado",
+	}
+	if lbl, ok := labels[s]; ok {
+		return lbl
+	}
+	return s
 }

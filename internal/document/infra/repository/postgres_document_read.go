@@ -18,16 +18,31 @@ func (repo *PostgresDocumentRepository) GetByID(ctx context.Context, id uuid.UUI
 	row := repo.db.QueryRowContext(ctx, query, id)
 	var doc entities.Document
 	var reqSource sql.NullString
+	var nullClientID, nullWorkID, nullUserID, nullReqID uuid.NullUUID
+
 	err := row.Scan(
-		&doc.ID, &doc.ClientID, &doc.WorkID, &doc.UserID,
+		&doc.ID, &nullClientID, &nullWorkID, &nullUserID,
 		&doc.DocumentName, &doc.Category, &doc.Version, &doc.FilePath,
-		&doc.RequirementID, &reqSource, &doc.CreatedAt,
+		&nullReqID, &reqSource, &doc.CreatedAt,
 	)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, nil
 		}
 		return nil, err
+	}
+
+	if nullClientID.Valid {
+		doc.ClientID = &nullClientID.UUID
+	}
+	if nullWorkID.Valid {
+		doc.WorkID = &nullWorkID.UUID
+	}
+	if nullUserID.Valid {
+		doc.UserID = &nullUserID.UUID
+	}
+	if nullReqID.Valid {
+		doc.RequirementID = &nullReqID.UUID
 	}
 	if reqSource.Valid {
 		doc.RequirementSource = reqSource.String
@@ -52,12 +67,27 @@ func (repo *PostgresDocumentRepository) GetByWorkID(ctx context.Context, workID 
 	for rows.Next() {
 		var doc entities.Document
 		var reqSource sql.NullString
+		var nullClientID, nullWorkID, nullUserID, nullReqID uuid.NullUUID
+
 		if err := rows.Scan(
-			&doc.ID, &doc.ClientID, &doc.WorkID, &doc.UserID,
+			&doc.ID, &nullClientID, &nullWorkID, &nullUserID,
 			&doc.DocumentName, &doc.Category, &doc.Version, &doc.FilePath,
-			&doc.RequirementID, &reqSource, &doc.CreatedAt,
+			&nullReqID, &reqSource, &doc.CreatedAt,
 		); err != nil {
 			return nil, err
+		}
+
+		if nullClientID.Valid {
+			doc.ClientID = &nullClientID.UUID
+		}
+		if nullWorkID.Valid {
+			doc.WorkID = &nullWorkID.UUID
+		}
+		if nullUserID.Valid {
+			doc.UserID = &nullUserID.UUID
+		}
+		if nullReqID.Valid {
+			doc.RequirementID = &nullReqID.UUID
 		}
 		if reqSource.Valid {
 			doc.RequirementSource = reqSource.String

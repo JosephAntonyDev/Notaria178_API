@@ -19,7 +19,7 @@ func NewUpdateBranchUseCase(r repository.BranchRepository) *UpdateBranchUseCase 
 func (uc *UpdateBranchUseCase) Execute(ctx context.Context, branchID string, req UpdateBranchRequest) (*BranchDTO, error) {
 	parsedID, err := uuid.Parse(branchID)
 	if err != nil {
-		return nil, errors.New("ID de sucursal inválido")
+		return nil, errors.New("ID de oficina inválido")
 	}
 
 	branch, err := uc.repo.GetByID(ctx, parsedID)
@@ -27,13 +27,13 @@ func (uc *UpdateBranchUseCase) Execute(ctx context.Context, branchID string, req
 		return nil, err
 	}
 	if branch == nil {
-		return nil, errors.New("sucursal no encontrada")
+		return nil, errors.New("oficina no encontrada")
 	}
 
 	if req.Name != nil && *req.Name != branch.Name {
 		existing, _ := uc.repo.GetByName(ctx, *req.Name)
 		if existing != nil {
-			return nil, errors.New("el nombre de la sucursal ya está registrado")
+			return nil, errors.New("el nombre de la oficina ya está registrado")
 		}
 		branch.Name = *req.Name
 	}

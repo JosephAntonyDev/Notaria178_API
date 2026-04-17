@@ -16,7 +16,23 @@ type AuditLogger interface {
 	LogAction(ctx context.Context, action string, entity string, entityID uuid.UUID, userID *uuid.UUID, details interface{}) error
 }
 
-// Notifier permite enviar notificaciones a usuarios desde el módulo work.
+// Notifier permite enviar notificaciones a usuarios desde el modulo work.
 type Notifier interface {
 	SendNotification(ctx context.Context, userID uuid.UUID, workID *uuid.UUID, notifType string, message string) error
+	NotifySuperAdmins(ctx context.Context, workID *uuid.UUID, notifType string, message string) error
+}
+
+// CommentNotifier permite disparar notificaciones push + in-app al crear un comentario.
+type CommentNotifier interface {
+	NotifyNewComment(ctx context.Context, input CommentNotification) error
+}
+
+// CommentNotification contiene los datos necesarios para notificar un nuevo comentario.
+type CommentNotification struct {
+	WorkID         uuid.UUID
+	WorkFolio      string
+	CommentID      uuid.UUID
+	CommentAuthor  uuid.UUID
+	CommentMessage string
+	AuthorName     string
 }

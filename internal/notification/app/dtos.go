@@ -14,6 +14,8 @@ type NotificationDTO struct {
 	UserID    uuid.UUID  `json:"user_id"`
 	WorkID    *uuid.UUID `json:"work_id,omitempty"`
 	Type      string     `json:"type"`
+	Title     *string    `json:"title,omitempty"`
+	Body      *string    `json:"body,omitempty"`
 	Message   string     `json:"message"`
 	IsRead    bool       `json:"is_read"`
 	CreatedAt time.Time  `json:"created_at"`
@@ -27,6 +29,8 @@ func ToNotificationDTO(n *entities.Notification) NotificationDTO {
 		UserID:    n.UserID,
 		WorkID:    n.WorkID,
 		Type:      string(n.Type),
+		Title:     n.Title,
+		Body:      n.Body,
 		Message:   n.Message,
 		IsRead:    n.IsRead,
 		CreatedAt: n.CreatedAt,

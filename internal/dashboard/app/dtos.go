@@ -145,3 +145,10 @@ func ptrKeyPart(s *string) string {
 	}
 	return *s
 }
+
+func userKeyPart(userID *string) string {
+	if userID == nil || *userID == "" {
+		return "all"
+	}
+	return *userID
+}

@@ -20,6 +20,9 @@ func NewGetKPIsUseCase(r repository.DashboardRepository, c cache.CachePort) *Get
 
 func (uc *GetKPIsUseCase) Execute(
 	ctx context.Context,
+	userRole string,
+	userID string,
+	userBranchID string,
 	branchID *string,
 	timeframe string,
 	startDate, endDate *string,
@@ -27,9 +30,23 @@ func (uc *GetKPIsUseCase) Execute(
 
 	start, end := ResolveTimeRange(timeframe, startDate, endDate)
 
+	// ── Data Scoping basado en rol ─────────────────────────────────────
+	var scopedUserID *string
+	switch userRole {
+	case "SUPER_ADMIN":
+		// Ve todo; si envía BranchID por URL se respeta.
+	case "LOCAL_ADMIN":
+		// Forzar aislamiento por oficina (ignora lo que venga por URL).
+		branchID = &userBranchID
+	case "DRAFTER", "DATA_ENTRY":
+		// Solo trabajos donde es proyectista o colaborador.
+		scopedUserID = &userID
+	}
+
 	// ── Cache key determinista ──────────────────────────────────────────
-	cacheKey := fmt.Sprintf("dashboard:kpis:%s:%s:%s",
+	cacheKey := fmt.Sprintf("dashboard:kpis:%s:%s:%s:%s",
 		branchKeyPart(branchID),
+		userKeyPart(scopedUserID),
 		start.Format("2006-01-02"),
 		end.Format("2006-01-02"),
 	)
@@ -44,9 +61,10 @@ func (uc *GetKPIsUseCase) Execute(
 
 	// ── Cache miss → PostgreSQL ─────────────────────────────────────────
 	filters := repository.DashboardFilters{
-		BranchID:  branchID,
-		StartDate: start,
-		EndDate:   end,
+		BranchID:     branchID,
+		ScopedUserID: scopedUserID,
+		StartDate:    start,
+		EndDate:      end,
 	}
 
 	result, err := uc.repo.GetKPIs(ctx, filters)

@@ -40,10 +40,21 @@ func (ctrl *SearchAuditLogsController) Handle(c *gin.Context) {
 		return
 	}
 
+	// ── Data Scoping por rol ────────────────────────────────────────────
+	userRole := c.GetString("userRole")
+	jwtUserID := c.GetString("userID")
+
+	// Para DRAFTER y DATA_ENTRY: forzar que solo vean sus propios logs.
+	effectiveUserID := query.UserID
+	switch userRole {
+	case "DRAFTER", "DATA_ENTRY":
+		effectiveUserID = &jwtUserID
+	}
+
 	filters := repository.AuditFilters{
 		Limit:     query.Limit,
 		Offset:    query.Offset,
-		UserID:    query.UserID,
+		UserID:    effectiveUserID,
 		Action:    query.Action,
 		Entity:    query.Entity,
 		EntityID:  query.EntityID,
